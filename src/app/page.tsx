@@ -1,101 +1,161 @@
 import Image from "next/image";
+import Link from "next/link";
 
 export default function Home() {
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      {/* Hero Section */}
+      <section className="px-4 py-20 sm:px-6 lg:px-8 bg-gradient-to-b from-blue-50 to-white dark:from-gray-800 dark:to-gray-700">
+        <div className="max-w-7xl mx-auto text-center">
+          <h1 className="text-5xl font-bold tracking-tight sm:text-6xl bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-indigo-600">
+            Empowering Indigenous Youth through AI-Driven Bursary Matching for the Ulnooweg EleV Initiative
+          </h1>
+          <p className="mt-6 max-w-2xl mx-auto text-xl text-gray-600 dark:text-gray-300">
+            Bridging the gap between opportunities and Indigenous youth across Atlantic Canada.
+          </p>
+          <div className="mt-10 flex justify-center gap-x-6">
+            <Link href="/sign-up" className="px-8 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+              Get Started
+            </Link>
+            <Link href="/about" className="px-8 py-3 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300">
+              Learn More
+            </Link>
+          </div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      </section>
+
+      {/* Mission Section */}
+      <section className="py-16 bg-white dark:bg-gray-800">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="mb-12 text-center">
+            <h2 className="text-3xl font-bold text-gray-800 dark:text-white">Our Mission</h2>
+            <p className="mt-4 text-gray-600 dark:text-gray-300">
+              Breaking down systemic barriers and empowering Indigenous youth through personalized bursary matching,
+              cultural resurgence, and innovative educational opportunities.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="flex items-start">
+              <div className="flex-shrink-0">
+                <span className="text-4xl">🎯</span>
+              </div>
+              <div className="ml-4">
+                <h3 className="text-xl font-semibold text-gray-800 dark:text-white">AI-Driven Matching</h3>
+                <p className="mt-2 text-gray-600 dark:text-gray-300">
+                  Our platform uses advanced AI to match bursary opportunities based on your profile, needs, and aspirations.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start">
+              <div className="flex-shrink-0">
+                <span className="text-4xl">🤖</span>
+              </div>
+              <div className="ml-4">
+                <h3 className="text-xl font-semibold text-gray-800 dark:text-white">Automated Categorization</h3>
+                <p className="mt-2 text-gray-600 dark:text-gray-300">
+                  Intelligent categorization of bursary applications streamlines selection for both students and providers.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start">
+              <div className="flex-shrink-0">
+                <span className="text-4xl">🔍</span>
+              </div>
+              <div className="ml-4">
+                <h3 className="text-xl font-semibold text-gray-800 dark:text-white">Advanced Search & Filtering</h3>
+                <p className="mt-2 text-gray-600 dark:text-gray-300">
+                  Find opportunities by institution, field of study, or financial need with easy-to-use filters.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start">
+              <div className="flex-shrink-0">
+                <span className="text-4xl">💡</span>
+              </div>
+              <div className="ml-4">
+                <h3 className="text-xl font-semibold text-gray-800 dark:text-white">Community Powered</h3>
+                <p className="mt-2 text-gray-600 dark:text-gray-300">
+                  Engage with mentors, recommend opportunities, and participate in a vibrant community.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* How It Works Section */}
+      <section className="py-16 bg-gray-50 dark:bg-gray-700">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="mb-12 text-center">
+            <h2 className="text-3xl font-bold text-gray-800 dark:text-white">How It Works</h2>
+            <p className="mt-4 text-gray-600 dark:text-gray-300">
+              Register, build your profile, and let our AI engine match you with the best bursaries available.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow hover:shadow-lg transition">
+              <div className="flex items-center justify-center text-4xl text-blue-600">
+                <span>📝</span>
+              </div>
+              <h3 className="mt-4 text-xl font-semibold text-gray-800 dark:text-white text-center">Sign Up & Profile</h3>
+              <p className="mt-2 text-center text-gray-600 dark:text-gray-300">
+                Create an account and build a profile tailored to your academic and career interests.
+              </p>
+            </div>
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow hover:shadow-lg transition">
+              <div className="flex items-center justify-center text-4xl text-blue-600">
+                <span>🤖</span>
+              </div>
+              <h3 className="mt-4 text-xl font-semibold text-gray-800 dark:text-white text-center">AI Matching</h3>
+              <p className="mt-2 text-center text-gray-600 dark:text-gray-300">
+                Our AI engine analyzes your profile to suggest the best bursary matches available.
+              </p>
+            </div>
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow hover:shadow-lg transition">
+              <div className="flex items-center justify-center text-4xl text-blue-600">
+                <span>💼</span>
+              </div>
+              <h3 className="mt-4 text-xl font-semibold text-gray-800 dark:text-white text-center">Apply & Track</h3>
+              <p className="mt-2 text-center text-gray-600 dark:text-gray-300">
+                Easily apply to bursaries and manage your applications through a modern, intuitive dashboard.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Resource Center Section */}
+      <section className="py-16 bg-white dark:bg-gray-800">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-gray-800 dark:text-white">Resource Center</h2>
+            <p className="mt-4 text-gray-600 dark:text-gray-300">
+              Access valuable guides, application tips, and expert advice to support your bursary journey.
+            </p>
+            <Link href="/resources" className="mt-6 inline-block px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+              Explore Resources
+            </Link>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
+
+const features = [
+  {
+    name: 'AI-Powered Matching',
+    description: 'Our intelligent system matches you with the most relevant opportunities based on your profile and goals.',
+    icon: <span className="text-2xl">🎯</span>,
+  },
+  {
+    name: 'Community Driven',
+    description: 'Connect with mentors, peers, and organizations that share your values and support your journey.',
+    icon: <span className="text-2xl">👥</span>,
+  },
+  {
+    name: 'Cultural Integration',
+    description: 'Access opportunities that embrace and celebrate Indigenous culture and traditions.',
+    icon: <span className="text-2xl">🌟</span>,
+  },
+];
