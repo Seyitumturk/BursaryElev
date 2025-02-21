@@ -2,6 +2,25 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 
+interface OrgFormData {
+  title: string;
+  category: string;
+  about: string;
+  mission: string;
+  address: string;
+  province: string;
+  city: string;
+  postalCode: string;
+  officeNumber: string;
+  alternativePhone: string;
+  email: string;
+  website: string;
+  twitter: string;
+  facebook: string;
+  linkedin: string;
+  [key: string]: string; // Index signature for dynamic access
+}
+
 export default function OrgOnboardingPage() {
   const router = useRouter();
 
@@ -26,7 +45,7 @@ export default function OrgOnboardingPage() {
 
   // Initialize form state with all keys
   const [currentStep, setCurrentStep] = useState(0);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<OrgFormData>({
     title: "",
     category: "",
     about: "",
@@ -127,7 +146,7 @@ export default function OrgOnboardingPage() {
             <textarea
               id={orgSteps[currentStep].name}
               name={orgSteps[currentStep].name}
-              value={(formData as any)[orgSteps[currentStep].name]}
+              value={formData[orgSteps[currentStep].name]}
               onChange={handleChange}
               placeholder={orgSteps[currentStep].placeholder}
               className="w-full px-4 py-2 text-black placeholder-black border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
@@ -138,7 +157,7 @@ export default function OrgOnboardingPage() {
               type={orgSteps[currentStep].type || "text"}
               id={orgSteps[currentStep].name}
               name={orgSteps[currentStep].name}
-              value={(formData as any)[orgSteps[currentStep].name]}
+              value={formData[orgSteps[currentStep].name]}
               onChange={handleChange}
               placeholder={orgSteps[currentStep].placeholder}
               className="w-full px-4 py-2 text-black placeholder-black border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"

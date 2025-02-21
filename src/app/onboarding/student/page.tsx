@@ -2,6 +2,15 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 
+interface StudentFormData {
+  institution: string;
+  major: string;
+  graduationYear: string;
+  interests: string;
+  bio: string;
+  [key: string]: string; // Index signature for dynamic access
+}
+
 export default function StudentOnboardingPage() {
   const router = useRouter();
 
@@ -16,7 +25,7 @@ export default function StudentOnboardingPage() {
   ];
 
   const [currentStep, setCurrentStep] = useState(0);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<StudentFormData>({
     institution: "",
     major: "",
     graduationYear: "",
@@ -56,7 +65,9 @@ export default function StudentOnboardingPage() {
   };
 
   const handleSubmit = async (e?: React.FormEvent) => {
-    e && e.preventDefault();
+    if (e) {
+      e.preventDefault();
+    }
     setLoading(true);
     try {
       const res = await fetch("/api/onboarding/student", {
@@ -132,7 +143,7 @@ export default function StudentOnboardingPage() {
               <textarea
                 id={studentSteps[currentStep].name}
                 name={studentSteps[currentStep].name}
-                value={(formData as any)[studentSteps[currentStep].name]}
+                value={formData[studentSteps[currentStep].name]}
                 onChange={handleChange}
                 placeholder={studentSteps[currentStep].placeholder}
                 className="w-full px-4 py-2 text-black placeholder-black border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
@@ -143,7 +154,7 @@ export default function StudentOnboardingPage() {
                 type="text"
                 id={studentSteps[currentStep].name}
                 name={studentSteps[currentStep].name}
-                value={(formData as any)[studentSteps[currentStep].name]}
+                value={formData[studentSteps[currentStep].name]}
                 onChange={handleChange}
                 placeholder={studentSteps[currentStep].placeholder}
                 className="w-full px-4 py-2 text-black placeholder-black border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
