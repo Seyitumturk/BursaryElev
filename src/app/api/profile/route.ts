@@ -5,7 +5,7 @@ import User from "@/models/User";
 import StudentProfile from "@/models/StudentProfile";
 import OrganizationProfile from "@/models/OrganizationProfile";
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
     await dbConnect();
 

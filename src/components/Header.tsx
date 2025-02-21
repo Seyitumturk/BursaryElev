@@ -8,7 +8,8 @@ import { SunIcon, MoonIcon } from "@heroicons/react/24/solid";
 
 export default function Header() {
   const { user } = useUser();
-  const role = user?.publicMetadata?.role;
+  // Explicitly type the role as string | null
+  const role = user?.publicMetadata?.role as string | null;
 
   // Theme state and toggle logic
   const [theme, setTheme] = useState("light");

@@ -1,25 +1,11 @@
 /** @type {import('next').NextConfig} */
-module.exports = {
-  content: [
-    "./src/**/*.{js,ts,jsx,tsx,mdx}",
-  ],
-  theme: {
-    extend: {
-      colors: {
-        background: "var(--background)",
-        foreground: "var(--foreground)",
-        primary: "var(--primary)",
-        "primary-dark": "var(--primary-dark)",
-        secondary: "var(--secondary)",
-      },
-    },
-  },
+const nextConfig = {
   images: {
     remotePatterns: [
       {
         protocol: "https",
         hostname: "img.clerk.com",
-        pathname: "/**", // allow all image paths from img.clerk.com
+        pathname: "/**",
       },
       {
         protocol: "https",
@@ -28,5 +14,6 @@ module.exports = {
       },
     ],
   },
-  plugins: [],
-} 
+};
+
+module.exports = nextConfig; 

@@ -6,10 +6,40 @@ import { BriefcaseIcon, TagIcon, DocumentTextIcon, StarIcon,
   BuildingOffice2Icon, BookOpenIcon, AcademicCapIcon, SparklesIcon, ChatBubbleLeftEllipsisIcon 
 } from "@heroicons/react/24/outline";
 
+interface Profile {
+  // Student profile fields
+  institution?: string;
+  major?: string;
+  graduationYear?: string;
+  interests?: string;
+  bio?: string;
+  
+  // Organization profile fields
+  title?: string;
+  category?: string;
+  about?: string;
+  mission?: string;
+  contact?: {
+    address?: string;
+    province?: string;
+    city?: string;
+    postalCode?: string;
+    officeNumber?: string;
+    alternativePhone?: string;
+    email?: string;
+    website?: string;
+    socialMedia?: {
+      twitter?: string;
+      facebook?: string;
+      linkedin?: string;
+    };
+  };
+}
+
 export default function ProfilePage() {
   // Retrieve the logged-in user from Clerk
   const { user } = useUser();
-  const [profile, setProfile] = React.useState<any>(null);
+  const [profile, setProfile] = React.useState<Profile | null>(null);
   const [profileLoading, setProfileLoading] = React.useState(true);
   const [error, setError] = React.useState("");
 
@@ -19,8 +49,6 @@ export default function ProfilePage() {
   // Determine the effective role: API role (if available) or fallback from Clerk
   const roleFromClerk = (user && user.publicMetadata) ? user.publicMetadata.role : "student";
   const effectiveRole = dbRole || roleFromClerk;
-
-  const loginLabel = effectiveRole === "student" ? "Student Login" : "Organization Login";
 
   React.useEffect(() => {
     async function fetchProfile() {
@@ -34,9 +62,8 @@ export default function ProfilePage() {
         if(data.role) {
           setDbRole(data.role);
         }
-      } catch (err) {
-        setError("Unable to load profile data.");
-        console.error(err);
+      } catch (err: Error | unknown) {
+        setError(err instanceof Error ? err.message : 'An error occurred');
       } finally {
         setProfileLoading(false);
       }

@@ -66,8 +66,9 @@ export default function OrgOnboardingPage() {
         // Redirect to the dashboard or profile page after successful onboarding
         router.push("/dashboard/profile");
       }
-    } catch (err) {
+    } catch (error: Error | unknown) {
       setError("An error occurred");
+      console.error(error);
     }
     setLoading(false);
   };

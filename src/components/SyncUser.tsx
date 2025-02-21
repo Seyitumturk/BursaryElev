@@ -3,7 +3,7 @@ import { useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
 
 export default function SyncUser() {
-  const { user, isSignedIn, isLoaded } = useUser();
+  const { user, isSignedIn } = useUser();
 
   useEffect(() => {
     async function syncUser() {

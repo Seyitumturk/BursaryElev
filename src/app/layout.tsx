@@ -3,7 +3,6 @@ import { ClerkProvider } from "@clerk/nextjs";
 import "./globals.css";
 import Header from "../components/Header";
 import SyncUser from "../components/SyncUser";
-import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "EleV Bursary Platform",

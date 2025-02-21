@@ -55,8 +55,8 @@ export default function StudentOnboardingPage() {
         throw new Error(data.error || "Submission failed");
       }
       router.push("/dashboard/bursaries");
-    } catch (err: any) {
-      setError(err.message || "An error occurred");
+    } catch (error: Error | unknown) {
+      setError(error instanceof Error ? error.message : "An error occurred");
     } finally {
       setLoading(false);
     }

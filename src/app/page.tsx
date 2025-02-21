@@ -1,4 +1,4 @@
-import Image from "next/image";
+// import Image from "next/image";
 import Link from "next/link";
 
 export default function Home() {
@@ -141,21 +141,3 @@ export default function Home() {
     </div>
   );
 }
-
-const features = [
-  {
-    name: 'AI-Powered Matching',
-    description: 'Our intelligent system matches you with the most relevant opportunities based on your profile and goals.',
-    icon: <span className="text-2xl">🎯</span>,
-  },
-  {
-    name: 'Community Driven',
-    description: 'Connect with mentors, peers, and organizations that share your values and support your journey.',
-    icon: <span className="text-2xl">👥</span>,
-  },
-  {
-    name: 'Cultural Integration',
-    description: 'Access opportunities that embrace and celebrate Indigenous culture and traditions.',
-    icon: <span className="text-2xl">🌟</span>,
-  },
-];

@@ -8,10 +8,10 @@ export default function OnboardingSelect() {
       <h1 className="text-3xl font-bold mb-8">Complete Your Onboarding</h1>
       <div className="flex flex-col gap-4">
         <Link href="/onboarding/student" className="btn-primary px-4 py-2">
-          I'm a Student
+          I&apos;m a Student
         </Link>
         <Link href="/onboarding/org" className="btn-primary px-4 py-2">
-          I'm a Funder
+          I&apos;m a Funder
         </Link>
       </div>
     </div>
