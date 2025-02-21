@@ -4,6 +4,28 @@ import { useRouter } from "next/navigation";
 
 export default function OrgOnboardingPage() {
   const router = useRouter();
+
+  // Define the ordered steps for organization onboarding
+  const orgSteps = [
+    { name: "title", label: "Organization Name", placeholder: "Enter your organization name", required: true },
+    { name: "category", label: "Category", placeholder: "Enter the category", required: true },
+    { name: "about", label: "About", placeholder: "Tell us about your organization", required: true, multiline: true },
+    { name: "mission", label: "Mission", placeholder: "Describe your mission", required: true, multiline: true },
+    { name: "address", label: "Address", placeholder: "Enter your address", required: true },
+    { name: "province", label: "Province", placeholder: "Enter your province", required: true },
+    { name: "city", label: "City", placeholder: "Enter your city", required: true },
+    { name: "postalCode", label: "Postal Code", placeholder: "Enter postal code", required: true },
+    { name: "officeNumber", label: "Office Number", placeholder: "Enter office number", required: true },
+    { name: "alternativePhone", label: "Alternative Phone", placeholder: "Enter alternative phone (optional)", required: false },
+    { name: "email", label: "Contact Email", placeholder: "Enter contact email", required: true, type: "email" },
+    { name: "website", label: "Website", placeholder: "Enter website URL (optional)", required: false, type: "url" },
+    { name: "twitter", label: "Twitter", placeholder: "Twitter handle (optional)", required: false },
+    { name: "facebook", label: "Facebook", placeholder: "Facebook page (optional)", required: false },
+    { name: "linkedin", label: "LinkedIn", placeholder: "LinkedIn profile (optional)", required: false },
+  ];
+
+  // Initialize form state with all keys
+  const [currentStep, setCurrentStep] = useState(0);
   const [formData, setFormData] = useState({
     title: "",
     category: "",
@@ -24,46 +46,45 @@ export default function OrgOnboardingPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
+  const handleNext = async () => {
+    const step = orgSteps[currentStep];
+    if (step.required && !formData[step.name].trim()) {
+      setError(`Please enter ${step.label}`);
+      return;
+    }
     setError("");
+    if (currentStep < orgSteps.length - 1) {
+      setCurrentStep(currentStep + 1);
+    } else {
+      // Final step: submit the form
+      await handleSubmit();
+    }
+  };
+
+  const handleBack = () => {
+    if (currentStep > 0) {
+      setCurrentStep(currentStep - 1);
+      setError("");
+    }
+  };
+
+  const handleSubmit = async () => {
+    setLoading(true);
     try {
       const res = await fetch("/api/onboarding/org", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: formData.title,
-          category: formData.category,
-          about: formData.about,
-          mission: formData.mission,
-          address: formData.address,
-          province: formData.province,
-          city: formData.city,
-          postalCode: formData.postalCode,
-          officeNumber: formData.officeNumber,
-          alternativePhone: formData.alternativePhone,
-          email: formData.email,
-          website: formData.website,
-          socialMedia: {
-            twitter: formData.twitter,
-            facebook: formData.facebook,
-            linkedin: formData.linkedin,
-          },
-        }),
+        body: JSON.stringify(formData),
       });
       const data = await res.json();
       if (!res.ok) {
         setError(data.error || "An error occurred");
       } else {
-        // Redirect to the dashboard or profile page after successful onboarding
         router.push("/dashboard/profile");
       }
     } catch (error: Error | unknown) {
@@ -73,273 +94,77 @@ export default function OrgOnboardingPage() {
     setLoading(false);
   };
 
+  // Calculate progress percentage
+  const progress = ((currentStep + 1) / orgSteps.length) * 100;
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 p-4">
-      <div className="max-w-2xl w-full bg-white dark:bg-gray-800 rounded-lg shadow p-8">
-        <h1 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white text-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+      <div className="bg-[#e8dccc] rounded-xl shadow-xl p-8 w-full max-w-md">
+        <h1 className="text-2xl font-bold mb-6 text-center text-black">
           Organization Onboarding
         </h1>
-        {error && <p className="text-red-500 mb-4">{error}</p>}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label
-              htmlFor="title"
-              className="block text-gray-700 dark:text-gray-300"
-            >
-              Organization Name
-            </label>
-            <input
-              type="text"
-              id="title"
-              name="title"
-              value={formData.title}
-              onChange={handleChange}
-              required
-              className="mt-1 w-full px-4 py-2 border rounded-md"
-            />
+        {/* Progress Bar */}
+        <div className="mb-4">
+          <div className="h-2 w-full bg-gray-200 rounded-full">
+            <div
+              className="h-full bg-indigo-500 rounded-full transition-all duration-300"
+              style={{ width: `${progress}%` }}
+            ></div>
           </div>
-          <div>
-            <label
-              htmlFor="category"
-              className="block text-gray-700 dark:text-gray-300"
-            >
-              Category
-            </label>
-            <input
-              type="text"
-              id="category"
-              name="category"
-              value={formData.category}
-              onChange={handleChange}
-              required
-              className="mt-1 w-full px-4 py-2 border rounded-md"
-            />
-          </div>
-          <div>
-            <label
-              htmlFor="about"
-              className="block text-gray-700 dark:text-gray-300"
-            >
-              About
-            </label>
-            <textarea
-              id="about"
-              name="about"
-              value={formData.about}
-              onChange={handleChange}
-              required
-              className="mt-1 w-full px-4 py-2 border rounded-md"
-            ></textarea>
-          </div>
-          <div>
-            <label
-              htmlFor="mission"
-              className="block text-gray-700 dark:text-gray-300"
-            >
-              Mission
-            </label>
-            <textarea
-              id="mission"
-              name="mission"
-              value={formData.mission}
-              onChange={handleChange}
-              required
-              className="mt-1 w-full px-4 py-2 border rounded-md"
-            ></textarea>
-          </div>
-          <h2 className="text-lg font-semibold mt-6 text-gray-800 dark:text-white">
-            Contact Information
-          </h2>
-          <div>
-            <label
-              htmlFor="address"
-              className="block text-gray-700 dark:text-gray-300"
-            >
-              Address
-            </label>
-            <input
-              type="text"
-              id="address"
-              name="address"
-              value={formData.address}
-              onChange={handleChange}
-              required
-              className="mt-1 w-full px-4 py-2 border rounded-md"
-            />
-          </div>
-          <div>
-            <label
-              htmlFor="province"
-              className="block text-gray-700 dark:text-gray-300"
-            >
-              Province
-            </label>
-            <input
-              type="text"
-              id="province"
-              name="province"
-              value={formData.province}
-              onChange={handleChange}
-              required
-              className="mt-1 w-full px-4 py-2 border rounded-md"
-            />
-          </div>
-          <div>
-            <label
-              htmlFor="city"
-              className="block text-gray-700 dark:text-gray-300"
-            >
-              City
-            </label>
-            <input
-              type="text"
-              id="city"
-              name="city"
-              value={formData.city}
-              onChange={handleChange}
-              required
-              className="mt-1 w-full px-4 py-2 border rounded-md"
-            />
-          </div>
-          <div>
-            <label
-              htmlFor="postalCode"
-              className="block text-gray-700 dark:text-gray-300"
-            >
-              Postal Code
-            </label>
-            <input
-              type="text"
-              id="postalCode"
-              name="postalCode"
-              value={formData.postalCode}
-              onChange={handleChange}
-              required
-              className="mt-1 w-full px-4 py-2 border rounded-md"
-            />
-          </div>
-          <div>
-            <label
-              htmlFor="officeNumber"
-              className="block text-gray-700 dark:text-gray-300"
-            >
-              Office Number
-            </label>
-            <input
-              type="text"
-              id="officeNumber"
-              name="officeNumber"
-              value={formData.officeNumber}
-              onChange={handleChange}
-              required
-              className="mt-1 w-full px-4 py-2 border rounded-md"
-            />
-          </div>
-          <div>
-            <label
-              htmlFor="alternativePhone"
-              className="block text-gray-700 dark:text-gray-300"
-            >
-              Alternative Phone (optional)
-            </label>
-            <input
-              type="text"
-              id="alternativePhone"
-              name="alternativePhone"
-              value={formData.alternativePhone}
-              onChange={handleChange}
-              className="mt-1 w-full px-4 py-2 border rounded-md"
-            />
-          </div>
-          <div>
-            <label
-              htmlFor="email"
-              className="block text-gray-700 dark:text-gray-300"
-            >
-              Contact Email
-            </label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              required
-              className="mt-1 w-full px-4 py-2 border rounded-md"
-            />
-          </div>
-          <div>
-            <label
-              htmlFor="website"
-              className="block text-gray-700 dark:text-gray-300"
-            >
-              Website (optional)
-            </label>
-            <input
-              type="url"
-              id="website"
-              name="website"
-              value={formData.website}
-              onChange={handleChange}
-              className="mt-1 w-full px-4 py-2 border rounded-md"
-            />
-          </div>
-          <div>
-            <label
-              htmlFor="twitter"
-              className="block text-gray-700 dark:text-gray-300"
-            >
-              Twitter (optional)
-            </label>
-            <input
-              type="text"
-              id="twitter"
-              name="twitter"
-              value={formData.twitter}
-              onChange={handleChange}
-              className="mt-1 w-full px-4 py-2 border rounded-md"
-            />
-          </div>
-          <div>
-            <label
-              htmlFor="facebook"
-              className="block text-gray-700 dark:text-gray-300"
-            >
-              Facebook (optional)
-            </label>
-            <input
-              type="text"
-              id="facebook"
-              name="facebook"
-              value={formData.facebook}
-              onChange={handleChange}
-              className="mt-1 w-full px-4 py-2 border rounded-md"
-            />
-          </div>
-          <div>
-            <label
-              htmlFor="linkedin"
-              className="block text-gray-700 dark:text-gray-300"
-            >
-              LinkedIn (optional)
-            </label>
-            <input
-              type="text"
-              id="linkedin"
-              name="linkedin"
-              value={formData.linkedin}
-              onChange={handleChange}
-              className="mt-1 w-full px-4 py-2 border rounded-md"
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full mt-6 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
+          <p className="text-sm text-center mt-1 text-black">
+            Step {currentStep + 1} of {orgSteps.length}
+          </p>
+        </div>
+        <div className="mb-4">
+          <label
+            htmlFor={orgSteps[currentStep].name}
+            className="block text-black font-medium mb-2"
           >
-            {loading ? "Submitting..." : "Complete Onboarding"}
+            {orgSteps[currentStep].label}{" "}
+            {orgSteps[currentStep].required && <span className="text-red-500">*</span>}
+          </label>
+          {orgSteps[currentStep].multiline ? (
+            <textarea
+              id={orgSteps[currentStep].name}
+              name={orgSteps[currentStep].name}
+              value={(formData as any)[orgSteps[currentStep].name]}
+              onChange={handleChange}
+              placeholder={orgSteps[currentStep].placeholder}
+              className="w-full px-4 py-2 text-black placeholder-black border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              rows={4}
+            ></textarea>
+          ) : (
+            <input
+              type={orgSteps[currentStep].type || "text"}
+              id={orgSteps[currentStep].name}
+              name={orgSteps[currentStep].name}
+              value={(formData as any)[orgSteps[currentStep].name]}
+              onChange={handleChange}
+              placeholder={orgSteps[currentStep].placeholder}
+              className="w-full px-4 py-2 text-black placeholder-black border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+          )}
+          {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
+        </div>
+        <div className="flex justify-between">
+          {currentStep > 0 && (
+            <button
+              type="button"
+              onClick={handleBack}
+              className="px-6 py-3 bg-gray-200 text-black rounded-xl shadow hover:bg-gray-300 transition"
+            >
+              Back
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={handleNext}
+            disabled={loading}
+            className="ml-auto px-6 py-3 bg-black dark:bg-black text-white rounded-xl shadow hover:bg-gray-800 transition"
+          >
+            {currentStep === orgSteps.length - 1 ? (loading ? "Submitting..." : "Complete Onboarding") : "Next"}
           </button>
-        </form>
+        </div>
       </div>
     </div>
   );

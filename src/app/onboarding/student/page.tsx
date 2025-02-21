@@ -4,7 +4,18 @@ import { useRouter } from "next/navigation";
 
 export default function StudentOnboardingPage() {
   const router = useRouter();
-  const [currentStep, setCurrentStep] = useState(1);
+
+  // Define the ordered steps for student onboarding
+  const studentSteps = [
+    { name: "institution", label: "Institution", placeholder: "Enter your institution", required: true },
+    { name: "major", label: "Major", placeholder: "Enter your major", required: true },
+    { name: "graduationYear", label: "Graduation Year", placeholder: "Enter your graduation year", required: true },
+    { name: "interests", label: "Interests", placeholder: "Enter your interests", required: false },
+    { name: "bio", label: "Bio", placeholder: "Tell us about yourself", required: false, multiline: true },
+    { name: "review", label: "Review Your Information" } // Review step
+  ];
+
+  const [currentStep, setCurrentStep] = useState(0);
   const [formData, setFormData] = useState({
     institution: "",
     major: "",
@@ -15,35 +26,38 @@ export default function StudentOnboardingPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleNext = () => {
-    // Simple validation for Step 1
-    if (currentStep === 1) {
-      const { institution, major, graduationYear } = formData;
-      if (!institution.trim() || !major.trim() || !graduationYear.trim()) {
-        setError("Please fill in all required fields in Basic Information.");
+  const handleNext = async () => {
+    // For review step, dont validate
+    if (studentSteps[currentStep].name !== "review") {
+      if (studentSteps[currentStep].required && !formData[studentSteps[currentStep].name].trim()) {
+        setError(`Please enter ${studentSteps[currentStep].label}`);
         return;
       }
     }
     setError("");
-    setCurrentStep(currentStep + 1);
+    if (currentStep < studentSteps.length - 1) {
+      setCurrentStep(currentStep + 1);
+    } else {
+      // Final step: submit the form
+      await handleSubmit();
+    }
   };
 
   const handleBack = () => {
-    setError("");
-    setCurrentStep(currentStep - 1);
+    if (currentStep > 0) {
+      setCurrentStep(currentStep - 1);
+      setError("");
+    }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.FormEvent) => {
+    e && e.preventDefault();
     setLoading(true);
-    setError("");
     try {
       const res = await fetch("/api/onboarding/student", {
         method: "POST",
@@ -62,178 +76,105 @@ export default function StudentOnboardingPage() {
     }
   };
 
-  const renderStep = () => {
-    switch (currentStep) {
-      case 1:
-        return (
-          <div className="space-y-4">
-            <h2 className="text-2xl font-semibold text-gray-800 dark:text-white">
-              Basic Information
-            </h2>
-            <div>
-              <label
-                htmlFor="institution"
-                className="block text-gray-700 dark:text-gray-300"
-              >
-                Institution <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                id="institution"
-                name="institution"
-                value={formData.institution}
-                onChange={handleChange}
-                placeholder="Enter your institution"
-                className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                required
-              />
-            </div>
-            <div>
-              <label
-                htmlFor="major"
-                className="block text-gray-700 dark:text-gray-300"
-              >
-                Major <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                id="major"
-                name="major"
-                value={formData.major}
-                onChange={handleChange}
-                placeholder="Enter your major"
-                className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                required
-              />
-            </div>
-            <div>
-              <label
-                htmlFor="graduationYear"
-                className="block text-gray-700 dark:text-gray-300"
-              >
-                Graduation Year <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                id="graduationYear"
-                name="graduationYear"
-                value={formData.graduationYear}
-                onChange={handleChange}
-                placeholder="Enter your graduation year"
-                className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                required
-              />
-            </div>
-          </div>
-        );
-      case 2:
-        return (
-          <div className="space-y-4">
-            <h2 className="text-2xl font-semibold text-gray-800 dark:text-white">
-              Additional Information
-            </h2>
-            <div>
-              <label
-                htmlFor="interests"
-                className="block text-gray-700 dark:text-gray-300"
-              >
-                Interests
-              </label>
-              <input
-                type="text"
-                id="interests"
-                name="interests"
-                value={formData.interests}
-                onChange={handleChange}
-                placeholder="Enter your interests"
-                className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-            </div>
-            <div>
-              <label
-                htmlFor="bio"
-                className="block text-gray-700 dark:text-gray-300"
-              >
-                Bio
-              </label>
-              <textarea
-                id="bio"
-                name="bio"
-                value={formData.bio}
-                onChange={handleChange}
-                placeholder="Tell us about yourself"
-                className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                rows={4}
-              ></textarea>
-            </div>
-          </div>
-        );
-      case 3:
-        return (
-          <div className="space-y-4">
-            <h2 className="text-2xl font-semibold text-gray-800 dark:text-white">
-              Review Your Information
-            </h2>
-            <div className="p-4 border rounded-md">
-              <p>
-                <strong>Institution:</strong> {formData.institution}
-              </p>
-              <p>
-                <strong>Major:</strong> {formData.major}
-              </p>
-              <p>
-                <strong>Graduation Year:</strong> {formData.graduationYear}
-              </p>
-              <p>
-                <strong>Interests:</strong> {formData.interests}
-              </p>
-              <p>
-                <strong>Bio:</strong> {formData.bio}
-              </p>
-            </div>
-          </div>
-        );
-      default:
-        return null;
-    }
-  };
+  // Calculate progress; for review step we count it as a step
+  const progress = ((currentStep + 1) / studentSteps.length) * 100;
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900 p-4">
-      <div className="w-full max-w-lg bg-white dark:bg-gray-800 p-8 rounded-xl shadow-lg">
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {renderStep()}
-          {error && <p className="text-red-500">{error}</p>}
-          <div className="flex justify-between">
-            {currentStep > 1 && (
-              <button
-                type="button"
-                onClick={handleBack}
-                className="btn-secondary"
-              >
-                Back
-              </button>
-            )}
-            {currentStep < 3 && (
-              <button
-                type="button"
-                onClick={handleNext}
-                className="btn-primary ml-auto"
-              >
-                Next
-              </button>
-            )}
-            {currentStep === 3 && (
-              <button
-                type="submit"
-                disabled={loading}
-                className="btn-primary ml-auto"
-              >
-                {loading ? "Submitting..." : "Submit"}
-              </button>
-            )}
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+      <div className="bg-[#e8dccc] rounded-xl shadow-xl p-8 w-full max-w-md">
+        <h1 className="text-2xl font-bold mb-6 text-center text-black">
+          Student Onboarding
+        </h1>
+        {/* Progress Bar */}
+        <div className="mb-4">
+          <div className="h-2 w-full bg-gray-200 rounded-full">
+            <div
+              className="h-full bg-indigo-500 rounded-full transition-all duration-300"
+              style={{ width: `${progress}%` }}
+            ></div>
           </div>
-        </form>
+          <p className="text-sm text-center mt-1 text-black">
+            Step {currentStep + 1} of {studentSteps.length}
+          </p>
+        </div>
+        {studentSteps[currentStep].name === "review" ? (
+          <div className="mb-4 text-black">
+            <h2 className="text-xl font-medium mb-4">Review Your Information</h2>
+            <div className="space-y-2">
+              <p>
+                <strong>Institution:</strong> {formData.institution || "N/A"}
+              </p>
+              <p>
+                <strong>Major:</strong> {formData.major || "N/A"}
+              </p>
+              <p>
+                <strong>Graduation Year:</strong> {formData.graduationYear || "N/A"}
+              </p>
+              <p>
+                <strong>Interests:</strong> {formData.interests || "N/A"}
+              </p>
+              <p>
+                <strong>Bio:</strong> {formData.bio || "N/A"}
+              </p>
+            </div>
+            {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
+          </div>
+        ) : (
+          <div className="mb-4">
+            <label
+              htmlFor={studentSteps[currentStep].name}
+              className="block text-black font-medium mb-2"
+            >
+              {studentSteps[currentStep].label}{" "}
+              {studentSteps[currentStep].required && <span className="text-red-500">*</span>}
+            </label>
+            {studentSteps[currentStep].multiline ? (
+              <textarea
+                id={studentSteps[currentStep].name}
+                name={studentSteps[currentStep].name}
+                value={(formData as any)[studentSteps[currentStep].name]}
+                onChange={handleChange}
+                placeholder={studentSteps[currentStep].placeholder}
+                className="w-full px-4 py-2 text-black placeholder-black border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                rows={4}
+              ></textarea>
+            ) : (
+              <input
+                type="text"
+                id={studentSteps[currentStep].name}
+                name={studentSteps[currentStep].name}
+                value={(formData as any)[studentSteps[currentStep].name]}
+                onChange={handleChange}
+                placeholder={studentSteps[currentStep].placeholder}
+                className="w-full px-4 py-2 text-black placeholder-black border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            )}
+            {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
+          </div>
+        )}
+        <div className="flex justify-between">
+          {currentStep > 0 && (
+            <button
+              type="button"
+              onClick={handleBack}
+              className="px-6 py-3 bg-gray-200 text-black rounded-xl shadow hover:bg-gray-300 transition"
+            >
+              Back
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={handleNext}
+            disabled={loading}
+            className="ml-auto px-6 py-3 bg-black dark:bg-black text-white rounded-xl shadow hover:bg-gray-800 transition"
+          >
+            {currentStep === studentSteps.length - 1
+              ? loading
+                ? "Submitting..."
+                : "Submit"
+              : "Next"}
+          </button>
+        </div>
       </div>
     </div>
   );
