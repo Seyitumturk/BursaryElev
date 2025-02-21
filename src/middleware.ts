@@ -20,7 +20,19 @@ const isOrganizationRoute = createRouteMatcher([
   "/dashboard/org(.*)",
 ]);
 
+// Define public routes (like sign-in, sign-up, etc.)
+const isPublicRoute = createRouteMatcher([
+  "/sign-in(.*)",
+  "/sign-up(.*)",
+  // Add other public routes if necessary (for example, a landing page or onboarding)
+]);
+
 export default clerkMiddleware(async (auth, req) => {
+  // Allow public routes to skip further middleware checks
+  if (isPublicRoute(req)) {
+    return NextResponse.next();
+  }
+
   const { sessionClaims } = await auth();
 
   // If sessionClaims is null, redirect to sign-in
