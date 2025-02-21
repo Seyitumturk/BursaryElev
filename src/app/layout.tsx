@@ -20,7 +20,7 @@ export default function RootLayout({
       <SyncUser />
       <html lang="en">
         {/* Removed the global Sidebar here to avoid duplicate sidebars */}
-        <body className="min-h-screen bg-gray-100 dark:bg-gray-800">
+        <body className="min-h-screen bg-[#f4ece4] dark:bg-gray-800">
           <Header />
           {children}
         </body>

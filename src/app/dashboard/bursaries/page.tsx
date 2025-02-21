@@ -66,7 +66,7 @@ export default function BursariesPage() {
   return (
     <div className="space-y-8">
       {/* Top section with search bar and view mode toggle */}
-      <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-md flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div className="bg-[#e8dccc] dark:bg-gray-800 p-4 rounded-xl shadow-md flex flex-col sm:flex-row items-center justify-between gap-4">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
           Bursary Opportunities
         </h1>
@@ -149,7 +149,7 @@ export default function BursariesPage() {
           {bursaries.map((bursary) => (
             <div
               key={bursary.id}
-              className="bg-gradient-to-br from-purple-500/10 to-indigo-500/10 dark:from-purple-900/10 dark:to-indigo-900/10 rounded-xl shadow-lg p-6 backdrop-blur-md border border-purple-300/20 hover:shadow-2xl transition-all duration-300"
+              className="bg-white/70 dark:bg-gray-800/30 rounded-xl shadow-lg p-6 backdrop-blur-md border border-[#e8dccc]/20 dark:border-white/20 hover:shadow-2xl transition-all duration-300"
             >
               <div className="flex items-center space-x-4">
                 <Image

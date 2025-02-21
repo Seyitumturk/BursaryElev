@@ -12,8 +12,8 @@ export default function DashboardLayout({
   ];
 
   return (
-    <div className="min-h-screen flex gap-4 bg-gray-100 dark:bg-gray-800">
-      <Sidebar title="EleV Dashboard" links={dashboardLinks} />
+    <div className="min-h-screen flex gap-4 bg-[#f4ece4] dark:bg-gray-800">
+      <Sidebar links={dashboardLinks} />
       <main className="flex-1 p-6">{children}</main>
     </div>
   );
