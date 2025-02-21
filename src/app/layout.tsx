@@ -19,7 +19,7 @@ export default function RootLayout({
     <ClerkProvider>
       <SyncUser />
       <html lang="en">
-        {/* Removed the global Sidebar here to avoid duplicate sidebars */}
+        {/* Removed the global Sidebard here to avoid duplicate sidebars */}
         <body className="min-h-screen bg-[#f4ece4] dark:bg-gray-800">
           <Header />
           {children}
