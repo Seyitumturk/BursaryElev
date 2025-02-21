@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
 import "./globals.css";
 import Header from "../components/Header";
-import Sidebar from "../components/Sidebar";
+import SyncUser from "../components/SyncUser";
 import Link from "next/link";
 
 export const metadata: Metadata = {
@@ -17,22 +17,12 @@ export default function RootLayout({
 }) {
   return (
     <ClerkProvider>
+      <SyncUser />
       <html lang="en">
-        <body className="min-h-screen flex gap-4 bg-gray-100 dark:bg-gray-800">
-          {/* Sidebar Navigation with new glass morphic design and toggle */}
-          <Sidebar
-            title="EleV Dashboard"
-            links={[
-              { href: "/", label: "Dashboard" },
-              { href: "/bursaries", label: "Bursaries" },
-              { href: "/submit", label: "Submit Opportunity" },
-            ]}
-          />
-          {/* Main Content Area */}
-          <main className="flex-1">
-            <Header />
-            {children}
-          </main>
+        {/* Removed the global Sidebar here to avoid duplicate sidebars */}
+        <body className="min-h-screen bg-gray-100 dark:bg-gray-800">
+          <Header />
+          {children}
         </body>
       </html>
     </ClerkProvider>

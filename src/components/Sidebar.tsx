@@ -10,59 +10,37 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ title, links }: SidebarProps) {
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
 
   return (
     <aside
-      className={`
-        flex flex-col h-screen p-4 transition-all duration-300
-        ${isCollapsed ? "w-16" : "w-64"}
-        bg-white/30 dark:bg-gray-900/30 backdrop-blur-md
-        shadow-[0_4px_30px_rgba(128,0,128,0.2)]
-        rounded-tr-2xl rounded-br-2xl
-      `}
+      className={`bg-white dark:bg-gray-900 shadow-lg transition-all duration-300 ${
+        collapsed ? "w-16" : "w-64"
+      } h-screen p-4`}
     >
-      <div className="flex items-center justify-between">
-        <div className="p-1 bg-gray-100 dark:bg-gray-700 rounded-md shadow-sm">
-          <Image
-            src="/logo.png"
-            alt="Logo"
-            width={isCollapsed ? 32 : 120}
-            height={isCollapsed ? 32 : 40}
-            className="transition-all duration-300"
-          />
-        </div>
-        <button
-          onClick={() => setIsCollapsed(!isCollapsed)}
-          className="text-purple-600 focus:outline-none"
-        >
-          {isCollapsed ? (
-            <ChevronRightIcon className="h-6 w-6" />
+      <div className="flex justify-between items-center mb-8">
+        {!collapsed && (
+          <h2 className="text-xl font-bold text-gray-800 dark:text-white">
+            {title}
+          </h2>
+        )}
+        <button onClick={() => setCollapsed(!collapsed)}>
+          {collapsed ? (
+            <ChevronRightIcon className="h-6 w-6 text-gray-800 dark:text-white" />
           ) : (
-            <ChevronLeftIcon className="h-6 w-6" />
+            <ChevronLeftIcon className="h-6 w-6 text-gray-800 dark:text-white" />
           )}
         </button>
       </div>
-      <nav className="mt-8 flex-1">
+      <nav>
         <ul className="space-y-4">
           {links.map((link) => (
             <li key={link.href}>
               <Link
                 href={link.href}
-                className={`
-                  flex items-center p-2 rounded-md transition
-                  bg-gradient-to-br from-purple-500/10 to-indigo-500/10 
-                  dark:from-purple-900/10 dark:to-indigo-900/10 
-                  backdrop-blur-sm shadow-sm border border-purple-300/20
-                  hover:scale-105 hover:shadow-2xl
-                  ${isCollapsed ? "justify-center" : "justify-start"}
-                `}
+                className="block p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-800 dark:text-white"
               >
-                {!isCollapsed ? (
-                  <span className="ml-2">{link.label}</span>
-                ) : (
-                  <span className="sr-only">{link.label}</span>
-                )}
+                {collapsed ? link.label.charAt(0) : link.label}
               </Link>
             </li>
           ))}
