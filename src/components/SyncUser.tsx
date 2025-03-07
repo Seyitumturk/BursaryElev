@@ -9,20 +9,25 @@ export default function SyncUser() {
     async function syncUser() {
       if (isSignedIn && user) {
         try {
-          const res = await fetch("/api/sync-user", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              email: user.primaryEmailAddress?.emailAddress,
-              role: user.publicMetadata?.role || "student", // default to 'student' if not set
-              firstName: user.firstName || "",
-              lastName: user.lastName || "",
-            }),
-          });
-          const data = await res.json();
-          console.log("Sync response:", data);
+          // First check if user exists
+          const checkRes = await fetch(`/api/users/${user.id}`);
+          if (checkRes.status === 404) {
+            // Only sync if user doesn't exist
+            const res = await fetch("/api/sync-user", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                email: user.primaryEmailAddress?.emailAddress,
+                role: user.publicMetadata?.role || "student",
+                firstName: user.firstName || "",
+                lastName: user.lastName || "",
+              }),
+            });
+            const data = await res.json();
+            console.log("Sync response:", data);
+          }
         } catch (error) {
           console.error("Error syncing user:", error);
         }

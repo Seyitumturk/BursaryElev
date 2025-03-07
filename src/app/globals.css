@@ -17,18 +17,23 @@
   
   /* Light mode colors */
   --sidebar-bg: #e8dccc;
+  --light-brown-1: #d2ac8b;
+  --light-brown-2: #c29b7d;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
+    --background: #5b3d2e;
     --foreground: #ffffff;
     --gray-50: #18181b;
     --gray-100: #27272a;
     --gray-200: #3f3f46;
     
-    /* Other dark mode variables... */
-    --sidebar-bg: #111827; /* dark:bg-gray-900 */
+    /* Dark mode colors */
+    --sidebar-bg: #3d2a20; /* Darker shade of the main background */
+    --header-bg: #c33c33; /* Red color for header */
+    --light-brown-1: #d2ac8b;
+    --light-brown-2: #c29b7d;
   }
 }
 

@@ -61,6 +61,13 @@ export default function ProfilePage() {
         setProfile(data.profile);
         if(data.role) {
           setDbRole(data.role);
+          // Store role in localStorage for other components to use
+          localStorage.setItem('userRole', data.role);
+        }
+
+        // Store organization ID in localStorage if user is org/funder
+        if (data.profile && (data.role === 'organization' || data.role === 'funder') && data.profile._id) {
+          localStorage.setItem('userOrgId', data.profile._id);
         }
       } catch (err: Error | unknown) {
         setError(err instanceof Error ? err.message : 'An error occurred');

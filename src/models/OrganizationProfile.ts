@@ -2,23 +2,11 @@ import mongoose, { Schema, Document } from "mongoose";
 
 export interface IOrganizationProfile extends Document {
   user: mongoose.Types.ObjectId;
-  title: string;
-  category: string;
-  about: string;
-  mission: string;
-  images: {
-    profileImage?: string;
-    headerBanner?: string;
-    logo?: string;
-  };
+  name: string;
+  description: string;
   contact: {
-    address: string;
-    province: string;
-    city: string;
-    postalCode: string;
-    officeNumber: string;
-    alternativePhone?: string;
     email: string;
+    phone?: string;
     website?: string;
     socialMedia?: {
       twitter?: string;
@@ -26,29 +14,24 @@ export interface IOrganizationProfile extends Document {
       linkedin?: string;
     };
   };
-  status: "pending" | "active";
+  address: {
+    street?: string;
+    city?: string;
+    state?: string;
+    zipCode?: string;
+    country?: string;
+  };
+  status?: "pending" | "active";
 }
 
 const OrganizationProfileSchema: Schema = new Schema(
   {
     user: { type: Schema.Types.ObjectId, ref: "User", required: true },
-    title: { type: String, required: true },
-    category: { type: String, required: true },
-    about: { type: String, required: true },
-    mission: { type: String, required: true },
-    images: {
-      profileImage: { type: String },
-      headerBanner: { type: String },
-      logo: { type: String },
-    },
+    name: { type: String, required: true },
+    description: { type: String, default: "" },
     contact: {
-      address: { type: String, required: true },
-      province: { type: String, required: true },
-      city: { type: String, required: true },
-      postalCode: { type: String, required: true },
-      officeNumber: { type: String, required: true },
-      alternativePhone: { type: String },
-      email: { type: String, required: true },
+      email: { type: String, default: "" },
+      phone: { type: String },
       website: { type: String },
       socialMedia: {
         twitter: { type: String },
@@ -56,7 +39,14 @@ const OrganizationProfileSchema: Schema = new Schema(
         linkedin: { type: String },
       },
     },
-    status: { type: String, enum: ["pending", "active"], default: "pending" },
+    address: {
+      street: { type: String },
+      city: { type: String },
+      state: { type: String },
+      zipCode: { type: String },
+      country: { type: String },
+    },
+    status: { type: String, enum: ["pending", "active"], default: "active" },
   },
   { timestamps: true }
 );

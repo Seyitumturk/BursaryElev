@@ -3,7 +3,13 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/solid";
-import { PlusCircleIcon, RocketLaunchIcon } from "@heroicons/react/24/outline";
+import { 
+  HomeIcon, 
+  UserIcon, 
+  BuildingLibraryIcon,
+  DocumentTextIcon,
+  AcademicCapIcon
+} from "@heroicons/react/24/outline";
 
 interface SidebarLink {
   href: string;
@@ -13,11 +19,11 @@ interface SidebarLink {
 
 interface SidebarProps {
   links: SidebarLink[];
+  position?: 'left' | 'right';
 }
 
-export default function Sidebar({ links }: SidebarProps) {
+export default function Sidebar({ links, position = 'left' }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
-  const [role, setRole] = useState<string | null>(null);
   const [theme, setTheme] = useState<string>("light");
 
   useEffect(() => {
@@ -49,81 +55,81 @@ export default function Sidebar({ links }: SidebarProps) {
     return () => observer.disconnect();
   }, []);
 
-  useEffect(() => {
-    async function fetchUserRole() {
-      try {
-        const res = await fetch("/api/profile");
-        if (!res.ok) throw new Error("Failed to fetch profile");
-        const data = await res.json();
-        setRole(data.role);
-      } catch (err) {
-        console.error(err);
-      }
+  // Map icons to standard links based on label
+  const getIconForLabel = (label: string) => {
+    switch (label.toLowerCase()) {
+      case 'bursaries':
+        return <DocumentTextIcon className="h-6 w-6" />;
+      case 'profile':
+        return <UserIcon className="h-6 w-6" />;
+      case 'home':
+        return <HomeIcon className="h-6 w-6" />;
+      case 'manage bursaries':
+        return <BuildingLibraryIcon className="h-6 w-6" />;
+      default:
+        return <AcademicCapIcon className="h-6 w-6" />;
     }
-    fetchUserRole();
-  }, []);
+  };
 
-  const navLinks: SidebarLink[] = [...links];
-  if (role === "organization" || role === "funder") {
-    navLinks.push({
-      href: "/submit",
-      label: "Add Bursary",
-      icon: <PlusCircleIcon className="h-6 w-6" />,
-    });
-  }
-  if (role === "student") {
-    navLinks.push({
-      href: "/apply",
-      label: "Apply with AI",
-      icon: <RocketLaunchIcon className="h-6 w-6" />,
-    });
-  }
+  // Add icons to links if not already provided
+  const navLinks: SidebarLink[] = links.map(link => ({
+    ...link,
+    icon: link.icon || getIconForLabel(link.label)
+  }));
+
+  // Determine collapse icon based on position
+  const CollapseIcon = position === 'right' 
+    ? (collapsed ? <ChevronLeftIcon className="h-5 w-5 text-gray-800 dark:text-white" /> : <ChevronRightIcon className="h-5 w-5 text-gray-800 dark:text-white" />)
+    : (collapsed ? <ChevronRightIcon className="h-5 w-5 text-gray-800 dark:text-white" /> : <ChevronLeftIcon className="h-5 w-5 text-gray-800 dark:text-white" />);
+
+  // Determine button position based on sidebar position
+  const buttonPosition = position === 'right' ? 'left-0' : 'right-0';
 
   return (
     <aside
-      className={`bg-[#e8dccc] dark:bg-gray-900 shadow-lg transition-all duration-300 ${
-        collapsed ? "w-16" : "w-64"
-      } h-screen p-4`}
+      className={`bg-white/70 dark:bg-[var(--sidebar-bg)] backdrop-blur-md shadow-lg transition-all duration-300 
+        ${collapsed ? "w-16" : "w-64"} h-screen p-4 flex flex-col z-10`}
+      style={{ borderLeft: position === 'right' ? '1px solid rgba(255,255,255,0.1)' : 'none', 
+              borderRight: position === 'left' ? '1px solid rgba(255,255,255,0.1)' : 'none' }}
     >
-      <div className="relative mb-8">
+      <div className="relative mb-10">
         <div className="flex justify-center">
-          <div className="p-2 bg-white/30 dark:bg-gray-700/30 backdrop-blur-md rounded-lg">
+          <div className={`p-2 bg-white/30 dark:bg-[var(--light-brown-2)]/20 backdrop-blur-md rounded-xl shadow-md ${collapsed ? 'w-10 h-10 flex items-center justify-center' : ''}`}>
             <Image
               src={theme === "light" ? "/logo-orange.png" : "/logo.png"}
               alt="Logo"
-              width={collapsed ? 50 : 90}
-              height={collapsed ? 50 : 90}
+              width={collapsed ? 28 : 70}
+              height={collapsed ? 28 : 70}
               className="object-contain"
             />
           </div>
         </div>
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="absolute top-1/2 right-0 transform -translate-y-1/2"
+          className={`absolute ${collapsed ? 'top-10' : 'top-1/2'} ${buttonPosition} transform ${collapsed ? 'translate-y-0' : '-translate-y-1/2'} ${collapsed ? 'translate-x-3/4' : '-translate-x-1/2'} bg-white dark:bg-[var(--light-brown-1)] rounded-full p-1.5 shadow-md hover:shadow-lg transition-all z-20`}
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
-          {collapsed ? (
-            <ChevronRightIcon className="h-6 w-6 text-gray-800 dark:text-white" />
-          ) : (
-            <ChevronLeftIcon className="h-6 w-6 text-gray-800 dark:text-white" />
-          )}
+          {CollapseIcon}
         </button>
       </div>
-      <nav>
-        <ul className="space-y-4">
+      <nav className="flex-1 overflow-y-auto">
+        <ul className="space-y-3">
           {navLinks.map((link) => (
             <li key={link.href}>
               <Link
                 href={link.href}
-                className="flex items-center gap-3 p-3 bg-white/30 dark:bg-gray-700/30 backdrop-blur-md rounded-lg hover:bg-white/50 dark:hover:bg-gray-600 transition"
+                className={`flex items-center ${collapsed ? 'justify-center' : 'px-3'} py-3 bg-white/30 dark:bg-[var(--light-brown-2)]/20 backdrop-blur-md rounded-xl shadow-sm hover:bg-[var(--light-brown-1)]/20 dark:hover:bg-[var(--light-brown-1)]/30 hover:shadow-md transition-all group`}
               >
                 {link.icon && (
-                  <span className="text-gray-800 dark:text-white">{link.icon}</span>
+                  <span className="text-[var(--light-brown-2)] dark:text-[var(--light-brown-1)] group-hover:text-[#c33c33]/70 dark:group-hover:text-[#c33c33]/80">
+                    {link.icon}
+                  </span>
                 )}
                 {!collapsed && (
-                  <span className="text-gray-800 dark:text-white">{link.label}</span>
+                  <span className="ml-3 text-gray-800 dark:text-white font-medium truncate">{link.label}</span>
                 )}
                 {collapsed && !link.icon && (
-                  <span className="text-gray-800 dark:text-white">
+                  <span className="text-[var(--light-brown-2)] dark:text-[var(--light-brown-1)] font-bold">
                     {link.label.charAt(0)}
                   </span>
                 )}
@@ -132,6 +138,9 @@ export default function Sidebar({ links }: SidebarProps) {
           ))}
         </ul>
       </nav>
+      <div className="mt-4 text-center text-xs text-gray-500 dark:text-[var(--light-brown-1)]/70">
+        {!collapsed && <p>Bursary Platform &copy; {new Date().getFullYear()}</p>}
+      </div>
     </aside>
   );
 } 
