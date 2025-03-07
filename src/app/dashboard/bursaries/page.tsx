@@ -687,8 +687,9 @@ const globalStyles = `
   }
   
   .text-xxs {
-    font-size: 0.65rem;
-    line-height: 1rem;
+    font-size: 0.6rem;
+    line-height: 0.9rem;
+    white-space: nowrap;
   }
 `;
 
@@ -998,7 +999,7 @@ export default function BursariesPage() {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-160px)] overflow-hidden gap-6">
+    <div className="flex flex-col h-[calc(100vh-160px)] overflow-hidden gap-6 w-full">
       {/* Custom scrollbar styles */}
       <style jsx global>{`
         ${globalStyles}
@@ -1071,7 +1072,7 @@ export default function BursariesPage() {
       `}</style>
       
       {/* Header section with title and search */}
-      <div className="bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-gray-800 dark:to-indigo-950/40 backdrop-blur-md p-6 rounded-2xl shadow-md border border-purple-100 dark:border-purple-900/30 flex-shrink-0">
+      <div className="bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-gray-800 dark:to-indigo-950/40 backdrop-blur-md p-6 rounded-2xl shadow-md border border-purple-100 dark:border-purple-900/30 flex-shrink-0 mx-0">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
@@ -1349,10 +1350,20 @@ export default function BursariesPage() {
                     {newlyAddedBursaryId === bursary._id && (
                       <div className="new-badge">NEW</div>
                     )}
+                    
+                    {/* Your Listing badge as a stamp */}
+                    {isOwnBursary(bursary) && (
+                      <div className="absolute -top-2 -left-2 z-10">
+                        <span className="px-1.5 py-0.5 bg-purple-100 dark:bg-purple-900/60 rounded-full text-[9px] leading-tight text-purple-800 dark:text-purple-300 font-medium border border-purple-200 dark:border-purple-800/50 whitespace-nowrap shadow-sm">
+                          Your Listing
+                        </span>
+                      </div>
+                    )}
+                    
                     {/* Card header with organization logo */}
                     <div className="flex justify-between items-start mb-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-purple-100 to-indigo-100 dark:from-purple-900/40 dark:to-indigo-900/40 rounded-full flex items-center justify-center overflow-hidden">
+                        <div className="w-10 h-10 bg-gradient-to-br from-purple-100 to-indigo-100 dark:from-purple-900/40 dark:to-indigo-900/40 rounded-full flex items-center justify-center shrink-0 overflow-hidden">
                           {bursary.organization && bursary.organization.images && bursary.organization.images.logo ? (
                             <img src={bursary.organization.images.logo} alt={`${bursary.organization?.title || 'Organization'} logo`} className="w-full h-full object-cover" />
                           ) : (
@@ -1360,23 +1371,15 @@ export default function BursariesPage() {
                           )}
                         </div>
                         <div>
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                              {bursary.organization?.title || 'Organization'}
-                            </span>
-                            {/* Show indicator if user owns this bursary - moved here */}
-                            {isOwnBursary(bursary) && (
-                              <span className="px-1.5 py-0.5 bg-purple-100 dark:bg-purple-900/60 rounded-full text-xxs text-purple-800 dark:text-purple-300 font-medium border border-purple-200 dark:border-purple-800/50">
-                                Your Listing
-                              </span>
-                            )}
-                          </div>
-                          {/* Organization highlight */}
-                          <div className="flex items-center gap-1 mt-0.5">
-                            <span className="text-xs text-indigo-600 dark:text-indigo-400 font-medium">
-                              {getOrganizationType(bursary)}
-                            </span>
-                          </div>
+                          {/* Organization title */}
+                          <span className="text-sm font-medium text-gray-600 dark:text-gray-400 block">
+                            {bursary.organization?.title || 'Organization'}
+                          </span>
+                          
+                          {/* Organization type - properly placed UNDER the title */}
+                          <span className="text-xs text-indigo-600 dark:text-indigo-400 font-medium block mt-1">
+                            {getOrganizationType(bursary)}
+                          </span>
                         </div>
                       </div>
                       
@@ -1385,9 +1388,9 @@ export default function BursariesPage() {
                         {/* Added date - modern time ago with tooltip */}
                         <div className="z-10" onClick={(e) => e.stopPropagation()}>
                           <div className="relative">
-                            <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 bg-white/90 dark:bg-gray-800/90 px-2.5 py-1 rounded-full shadow-sm border border-gray-100/50 dark:border-gray-700/50 hover:bg-white dark:hover:bg-gray-800 transition-colors group">
+                            <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 bg-white/90 dark:bg-gray-800/90 px-2 py-0.5 rounded-full shadow-sm border border-gray-100/50 dark:border-gray-700/50 hover:bg-white dark:hover:bg-gray-800 transition-colors group">
                               <ClockIcon className="h-3 w-3" />
-                              <span>{formatTimeAgo(bursary.createdAt)}</span>
+                              <span className="truncate max-w-[80px] sm:max-w-none">{formatTimeAgo(bursary.createdAt)}</span>
                             
                               {/* Tooltip */}
                               <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-full opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-20 w-max pointer-events-none mt-1">
@@ -1403,13 +1406,13 @@ export default function BursariesPage() {
                         {/* Bookmark button */}
                         <button 
                           onClick={(e) => toggleBookmark(e, bursary._id)} 
-                          className="text-gray-400 hover:text-purple-600 dark:text-gray-500 dark:hover:text-purple-400 transition-colors"
+                          className="text-gray-400 hover:text-purple-600 dark:text-gray-500 dark:hover:text-purple-400 transition-colors flex-shrink-0 ml-2 self-start mt-1"
                           aria-label={isBookmarked(bursary._id) ? "Remove from bookmarks" : "Add to bookmarks"}
                         >
                           {isBookmarked(bursary._id) ? (
-                            <BookmarkSolidIcon className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+                            <BookmarkSolidIcon className="h-5 w-5 text-purple-600 dark:text-purple-400" />
                           ) : (
-                            <BookmarkOutlineIcon className="h-6 w-6" />
+                            <BookmarkOutlineIcon className="h-5 w-5" />
                           )}
                         </button>
                       </div>
@@ -1481,6 +1484,16 @@ export default function BursariesPage() {
                     {newlyAddedBursaryId === bursary._id && (
                       <div className="new-badge">NEW</div>
                     )}
+                    
+                    {/* Your Listing badge as a stamp */}
+                    {isOwnBursary(bursary) && (
+                      <div className="absolute -top-2 -left-2 z-10">
+                        <span className="px-1.5 py-0.5 bg-purple-100 dark:bg-purple-900/60 rounded-full text-[9px] leading-tight text-purple-800 dark:text-purple-300 font-medium border border-purple-200 dark:border-purple-800/50 whitespace-nowrap shadow-sm">
+                          Your Listing
+                        </span>
+                      </div>
+                    )}
+                    
                     {/* Organization logo */}
                     <div className="w-12 h-12 bg-gradient-to-br from-purple-100 to-indigo-100 dark:from-purple-900/40 dark:to-indigo-900/40 rounded-full flex items-center justify-center shrink-0 overflow-hidden">
                       {bursary.organization && bursary.organization.images && bursary.organization.images.logo ? (
@@ -1493,28 +1506,20 @@ export default function BursariesPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex justify-between items-start">
                         <div>
-                          <div className="flex items-center gap-1.5 mb-1">
-                            <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                              {bursary.organization?.title || 'Organization'}
-                            </span>
-                            {/* Show indicator if user owns this bursary - moved here */}
-                            {isOwnBursary(bursary) && (
-                              <span className="px-1.5 py-0.5 bg-purple-100 dark:bg-purple-900/60 rounded-full text-xxs text-purple-800 dark:text-purple-300 font-medium border border-purple-200 dark:border-purple-800/50">
-                                Your Listing
-                              </span>
-                            )}
-                            
-                            {/* Organization highlight - list view */}
-                            <div className="flex items-center gap-1 mb-1.5">
-                              <span className="text-xs text-indigo-600 dark:text-indigo-400 font-medium">
-                                {getOrganizationType(bursary)}
-                              </span>
-                            </div>
-                          </div>
+                          {/* Organization title */}
+                          <span className="text-sm font-medium text-gray-600 dark:text-gray-400 block">
+                            {bursary.organization?.title || 'Organization'}
+                          </span>
+                          
+                          {/* Organization type - properly placed UNDER the title */}
+                          <span className="text-xs text-indigo-600 dark:text-indigo-400 font-medium block mt-0.5 mb-1.5">
+                            {getOrganizationType(bursary)}
+                          </span>
                           
                           <h3 className="text-lg font-semibold text-gray-900 dark:text-white line-clamp-1">
                             {bursary.title}
                           </h3>
+                          
                           <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-2 mt-1">
                             {bursary.description}
                           </p>
@@ -1535,8 +1540,8 @@ export default function BursariesPage() {
                         {/* Added date with tooltip - list view */}
                         <div className="flex items-center text-gray-500 dark:text-gray-400 relative" onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center hover:text-purple-500 dark:hover:text-purple-400 transition-colors cursor-pointer relative">
-                            <ClockIcon className="h-4 w-4 mr-1" />
-                            <span>{formatTimeAgo(bursary.createdAt)}</span>
+                            <ClockIcon className="h-3.5 w-3.5 mr-1" />
+                            <span className="truncate max-w-[80px] sm:max-w-none text-xs">{formatTimeAgo(bursary.createdAt)}</span>
                             
                             {/* Tooltip - Only visible when parent is hovered */}
                             <div className="absolute left-1/2 transform -translate-x-1/2 bottom-full mb-1 opacity-0 invisible transition-opacity duration-200 group-hover:opacity-0 hover:opacity-100 hover:visible z-20 w-max">
@@ -1553,13 +1558,13 @@ export default function BursariesPage() {
                     {/* Bookmark button */}
                     <button 
                       onClick={(e) => toggleBookmark(e, bursary._id)} 
-                      className="text-gray-400 hover:text-purple-600 dark:text-gray-500 dark:hover:text-purple-400 transition-colors ml-2"
+                      className="text-gray-400 hover:text-purple-600 dark:text-gray-500 dark:hover:text-purple-400 transition-colors flex-shrink-0 ml-2 self-start mt-1"
                       aria-label={isBookmarked(bursary._id) ? "Remove from bookmarks" : "Add to bookmarks"}
                     >
                       {isBookmarked(bursary._id) ? (
-                        <BookmarkSolidIcon className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+                        <BookmarkSolidIcon className="h-5 w-5 text-purple-600 dark:text-purple-400" />
                       ) : (
-                        <BookmarkOutlineIcon className="h-6 w-6" />
+                        <BookmarkOutlineIcon className="h-5 w-5" />
                       )}
                     </button>
                   </div>
@@ -1571,7 +1576,7 @@ export default function BursariesPage() {
         
         {/* Detail Panel (Sidebar) */}
         {isDetailOpen && selectedBursary && (
-          <div className="w-2/5 bg-purple-50/90 dark:bg-purple-900/10 shadow-lg rounded-2xl border border-purple-100/50 dark:border-purple-900/30 p-6 overflow-y-auto overflow-x-hidden custom-scrollbar">
+          <div className="w-2/5 bg-purple-50/90 dark:bg-purple-900/10 shadow-xl rounded-2xl border-[3px] border-purple-400 dark:border-purple-600 p-6 overflow-y-auto overflow-x-hidden custom-scrollbar">
             {/* Close button */}
             <div className="flex justify-end mb-4">
               <button 

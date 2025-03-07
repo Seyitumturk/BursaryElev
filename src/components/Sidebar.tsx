@@ -87,7 +87,7 @@ export default function Sidebar({ links, position = 'left' }: SidebarProps) {
 
   return (
     <aside
-      className={`bg-white/70 dark:bg-[var(--sidebar-bg)] backdrop-blur-md shadow-lg transition-all duration-300 
+      className={`bg-[var(--sidebar-bg)]/80 dark:bg-[var(--sidebar-bg)] backdrop-blur-md shadow-lg transition-all duration-300 
         ${collapsed ? "w-16" : "w-64"} h-screen p-4 flex flex-col z-10`}
       style={{ borderLeft: position === 'right' ? '1px solid rgba(255,255,255,0.1)' : 'none', 
               borderRight: position === 'left' ? '1px solid rgba(255,255,255,0.1)' : 'none' }}
