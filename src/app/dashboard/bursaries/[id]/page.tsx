@@ -162,7 +162,7 @@ export default function BursaryDetailPage({ params }: { params: Promise<{ id: st
         {isOwner && (
           <div className="flex space-x-3">
             <Link
-              href={`/dashboard/bursaries/edit?id=${bursary._id}`}
+              href={`/dashboard/bursaries/${bursary._id}/edit`}
               className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition"
             >
               Edit Bursary

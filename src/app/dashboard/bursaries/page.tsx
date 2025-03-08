@@ -32,6 +32,7 @@ import {
 import { BookmarkIcon as BookmarkOutlineIcon } from "@heroicons/react/24/outline";
 import { BookmarkIcon as BookmarkSolidIcon } from "@heroicons/react/24/solid";
 import { useAuth, useUser } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
 
 interface Bursary {
   _id: string;
@@ -711,6 +712,10 @@ export default function BursariesPage() {
   const [userOrgId, setUserOrgId] = useState<string | null>(null);
   const [isAddBursaryModalOpen, setIsAddBursaryModalOpen] = useState(false);
   const [newlyAddedBursaryId, setNewlyAddedBursaryId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleteSuccess, setDeleteSuccess] = useState<string | null>(null);
+  const router = useRouter();
 
   // Get user role and org ID from localStorage
   useEffect(() => {
@@ -995,6 +1000,64 @@ export default function BursariesPage() {
       return "Scholarship Provider";
     } else {
       return "Education Partner";
+    }
+  };
+
+  // Handle edit bursary - redirect to edit page or form
+  const handleEditBursary = (e: React.MouseEvent, bursaryId: string) => {
+    e.stopPropagation();
+    // Use router.push instead of window.location for better Next.js integration
+    // The route format should follow your app's structure
+    router.push(`/dashboard/bursaries/${bursaryId}/edit`);
+  };
+
+  // Handle delete bursary
+  const handleDeleteBursary = async (e: React.MouseEvent, bursaryId: string) => {
+    e.stopPropagation();
+    
+    if (!confirm("Are you sure you want to delete this bursary? This action cannot be undone.")) {
+      return;
+    }
+    
+    try {
+      setIsDeleting(true);
+      setDeleteError(null);
+      
+      const response = await fetch(`/api/bursaries/${bursaryId}`, {
+        method: 'DELETE',
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete bursary');
+      }
+      
+      // On successful deletion
+      setDeleteSuccess('Bursary deleted successfully');
+      
+      // Remove the deleted bursary from the state
+      const updatedBursaries = bursaries.filter(b => b._id !== bursaryId);
+      setBursaries(updatedBursaries);
+      setFilteredBursaries(filteredBursaries.filter(b => b._id !== bursaryId));
+      
+      // Close the detail panel
+      setIsDetailOpen(false);
+      setSelectedBursary(null);
+      
+      // Clear the success message after 3 seconds
+      setTimeout(() => {
+        setDeleteSuccess(null);
+      }, 3000);
+    } catch (error) {
+      console.error('Error deleting bursary:', error);
+      setDeleteError(error instanceof Error ? error.message : 'An error occurred while deleting the bursary');
+      
+      // Clear the error message after 3 seconds
+      setTimeout(() => {
+        setDeleteError(null);
+      }, 3000);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -1620,18 +1683,64 @@ export default function BursariesPage() {
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white pr-8">
                 {selectedBursary.title}
               </h2>
-              <button 
-                onClick={(e) => toggleBookmark(e, selectedBursary._id)} 
-                className="text-gray-400 hover:text-purple-600 dark:text-gray-500 dark:hover:text-purple-400 transition-colors"
-                aria-label={isBookmarked(selectedBursary._id) ? "Remove from bookmarks" : "Add to bookmarks"}
-              >
-                {isBookmarked(selectedBursary._id) ? (
-                  <BookmarkSolidIcon className="h-6 w-6 text-purple-600 dark:text-purple-400" />
-                ) : (
-                  <BookmarkOutlineIcon className="h-6 w-6" />
+              <div className="flex items-center space-x-2">
+                {/* Show edit and delete buttons only if user owns the bursary */}
+                {isOwnBursary(selectedBursary) && userRole === 'funder' && (
+                  <>
+                    <button 
+                      onClick={(e) => handleEditBursary(e, selectedBursary._id)} 
+                      className="p-1.5 bg-indigo-100 hover:bg-indigo-200 dark:bg-indigo-900/30 dark:hover:bg-indigo-800/40 text-indigo-700 dark:text-indigo-300 rounded transition-colors"
+                      aria-label="Edit bursary"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                    </button>
+                    <button 
+                      onClick={(e) => handleDeleteBursary(e, selectedBursary._id)} 
+                      className="p-1.5 bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-800/40 text-red-700 dark:text-red-300 rounded transition-colors"
+                      aria-label="Delete bursary"
+                      disabled={isDeleting}
+                    >
+                      {isDeleting ? (
+                        <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                      ) : (
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      )}
+                    </button>
+                  </>
                 )}
-              </button>
+                <button 
+                  onClick={(e) => toggleBookmark(e, selectedBursary._id)} 
+                  className="text-gray-400 hover:text-purple-600 dark:text-gray-500 dark:hover:text-purple-400 transition-colors"
+                  aria-label={isBookmarked(selectedBursary._id) ? "Remove from bookmarks" : "Add to bookmarks"}
+                >
+                  {isBookmarked(selectedBursary._id) ? (
+                    <BookmarkSolidIcon className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+                  ) : (
+                    <BookmarkOutlineIcon className="h-6 w-6" />
+                  )}
+                </button>
+              </div>
             </div>
+            
+            {/* Display success or error messages */}
+            {deleteSuccess && (
+              <div className="mb-4 p-2 bg-green-100 border border-green-300 text-green-800 rounded-md">
+                {deleteSuccess}
+              </div>
+            )}
+            
+            {deleteError && (
+              <div className="mb-4 p-2 bg-red-100 border border-red-300 text-red-800 rounded-md">
+                {deleteError}
+              </div>
+            )}
             
             {/* Key details */}
             <div className="grid grid-cols-2 gap-4 mb-6">
@@ -1704,72 +1813,81 @@ export default function BursariesPage() {
               </div>
             </div>
             
+            {/* Tags and metadata */}
+            <div className="space-y-3">
+              {/* Field of Study */}
+              {selectedBursary.fieldOfStudy && selectedBursary.fieldOfStudy.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Field of Study</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedBursary.fieldOfStudy.map((field, index) => (
+                      <span 
+                        key={index}
+                        className="px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-xs text-purple-800 dark:text-purple-300 rounded-full"
+                      >
+                        {field}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {/* Academic Level */}
+              {selectedBursary.academicLevel && selectedBursary.academicLevel.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Academic Level</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedBursary.academicLevel.map((level, index) => (
+                      <span 
+                        key={index}
+                        className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-xs text-blue-800 dark:text-blue-300 rounded-full capitalize"
+                      >
+                        {level}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Financial Need Level */}
+              <div>
+                <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Financial Need Level</h3>
+                <span className="px-2 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-xs text-emerald-800 dark:text-emerald-300 rounded-full capitalize">
+                  {selectedBursary.financialNeedLevel || 'Medium'}
+                </span>
+              </div>
+
+              {/* AI Tags */}
+              {selectedBursary.aiTags && selectedBursary.aiTags.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">AI-Generated Tags</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedBursary.aiTags.map((tag, index) => (
+                      <span 
+                        key={index}
+                        className="px-2 py-1 bg-indigo-100 dark:bg-indigo-900/30 text-xs text-indigo-800 dark:text-indigo-300 rounded-full"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+            
             {/* Apply button */}
             {canApply() && (
-              <a 
-                href={selectedBursary.applicationUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block w-full px-4 py-3 bg-[var(--header-bg)] text-white font-medium rounded-xl text-center hover:bg-[var(--header-bg)]/90 transition-all shadow-md hover:shadow-lg"
-              >
-                Apply Now
-              </a>
-            )}
-            
-            {/* Organization details */}
-            {isOwnBursary(selectedBursary) && (
-              <div className="mt-6 border-t border-gray-200 dark:border-gray-700 pt-6">
-                <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-2">Listing Management</h3>
-                <div className="flex flex-col space-y-3">
-                  <Link 
-                    href={`/dashboard/bursaries/edit/${selectedBursary._id}`}
-                    className="px-4 py-2 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-lg text-sm font-medium flex items-center justify-center hover:bg-indigo-200 dark:hover:bg-indigo-900/50 transition-colors"
-                  >
-                    <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                    </svg>
-                    Edit Bursary
-                  </Link>
-                  <button 
-                    className="px-4 py-2 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-lg text-sm font-medium flex items-center justify-center hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors"
-                  >
-                    <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                    Delete Bursary
-                  </button>
-                </div>
+              <div className="mt-6">
+                <a
+                  href={selectedBursary.applicationUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full block text-center px-4 py-2 bg-purple-600 hover:bg-purple-700 dark:bg-purple-700 dark:hover:bg-purple-600 text-white font-medium rounded-lg shadow-sm transition-colors"
+                >
+                  Apply Now
+                </a>
               </div>
             )}
-            
-            {/* Tags and metadata */}
-            {selectedBursary.aiTags?.length > 0 && (
-              <div className="mt-6 border-t border-gray-200 dark:border-gray-700 pt-6">
-                <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-2">Tags</h3>
-                <div className="flex flex-wrap gap-2">
-                  {selectedBursary.aiTags.map((tag) => (
-                    <span 
-                      key={tag}
-                      className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-xs text-blue-800 dark:text-blue-300 rounded-full"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-            
-            {/* Creation date info */}
-            <div className="mt-6 border-t border-gray-200 dark:border-gray-700 pt-6">
-              <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-2">Listing Information</h3>
-              <div className="flex items-center text-gray-600 dark:text-gray-300">
-                <ClockIcon className="h-5 w-5 mr-2 text-gray-500 dark:text-gray-400" />
-                <div>
-                  <p>Added {formatTimeAgo(selectedBursary.createdAt)}</p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">{formatFullDate(selectedBursary.createdAt)}</p>
-                </div>
-              </div>
-            </div>
           </div>
         )}
       </div>

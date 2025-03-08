@@ -465,13 +465,17 @@ export default function Header() {
           {/* Theme Toggle Button */}
           <button
             onClick={toggleTheme}
-            className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-all"
+            className={`p-2 rounded-full transition-all ${
+              theme === "light" 
+                ? "bg-gray-800 hover:bg-gray-700 text-white" 
+                : "bg-white hover:bg-gray-100 text-gray-800"
+            }`}
             aria-label="Toggle Theme"
           >
             {theme === "light" ? (
-              <MoonIcon className="h-6 w-6 text-gray-600 dark:text-gray-300" />
+              <MoonIcon className="h-6 w-6" />
             ) : (
-              <SunIcon className="h-6 w-6 text-yellow-500" />
+              <SunIcon className="h-6 w-6" />
             )}
           </button>
           
