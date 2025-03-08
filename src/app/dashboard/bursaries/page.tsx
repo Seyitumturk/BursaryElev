@@ -1653,7 +1653,7 @@ export default function BursariesPage() {
             </div>
             
             {/* Organization info */}
-            <div className="flex items-center gap-3 mb-6">
+            <div className="flex items-center gap-3 mb-6 p-4 bg-white/40 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-purple-100/50 dark:border-purple-800/20">
               <div className="w-12 h-12 bg-gradient-to-br from-purple-100 to-indigo-100 dark:from-purple-900/40 dark:to-indigo-900/40 rounded-full flex items-center justify-center overflow-hidden">
                 {selectedBursary.organization.images?.logo ? (
                   <img src={selectedBursary.organization.images.logo} alt={`${selectedBursary.organization.title} logo`} className="w-full h-full object-cover" />
@@ -1679,7 +1679,7 @@ export default function BursariesPage() {
             </div>
             
             {/* Bursary title and bookmark */}
-            <div className="flex justify-between items-start mb-4">
+            <div className="flex justify-between items-start mb-6 pb-4 border-b border-purple-200/50 dark:border-purple-800/20">
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white pr-8">
                 {selectedBursary.title}
               </h2>
@@ -1744,13 +1744,13 @@ export default function BursariesPage() {
             
             {/* Key details */}
             <div className="grid grid-cols-2 gap-4 mb-6">
-              <div className="bg-purple-50 dark:bg-purple-900/20 rounded-xl p-3">
+              <div className="bg-white/50 dark:bg-white/5 rounded-xl p-3 shadow-sm border border-purple-100/50 dark:border-purple-800/20">
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Award Amount</p>
                 <p className="text-lg font-semibold text-emerald-700 dark:text-emerald-400">
                   {formatCurrency(selectedBursary.awardAmount)}
                 </p>
               </div>
-              <div className="bg-purple-50 dark:bg-purple-900/20 rounded-xl p-3">
+              <div className="bg-white/50 dark:bg-white/5 rounded-xl p-3 shadow-sm border border-purple-100/50 dark:border-purple-800/20">
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Application Deadline</p>
                 <p className="text-lg font-semibold text-gray-900 dark:text-white">
                   {formatDate(selectedBursary.deadline)}
@@ -1759,7 +1759,7 @@ export default function BursariesPage() {
             </div>
             
             {/* Description */}
-            <div className="mb-6">
+            <div className="mb-6 p-4 bg-white/40 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-purple-100/50 dark:border-purple-800/20">
               <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-2">Description</h3>
               <p className="text-gray-700 dark:text-gray-300 whitespace-pre-line">
                 {selectedBursary.description}
@@ -1767,7 +1767,7 @@ export default function BursariesPage() {
             </div>
             
             {/* Eligibility */}
-            <div className="mb-6">
+            <div className="mb-6 p-4 bg-white/40 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-purple-100/50 dark:border-purple-800/20">
               <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-2">Eligibility</h3>
               <div className="space-y-3">
                 {selectedBursary.academicLevel?.length > 0 && (
@@ -1814,53 +1814,13 @@ export default function BursariesPage() {
             </div>
             
             {/* Tags and metadata */}
-            <div className="space-y-3">
-              {/* Field of Study */}
-              {selectedBursary.fieldOfStudy && selectedBursary.fieldOfStudy.length > 0 && (
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Field of Study</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedBursary.fieldOfStudy.map((field, index) => (
-                      <span 
-                        key={index}
-                        className="px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-xs text-purple-800 dark:text-purple-300 rounded-full"
-                      >
-                        {field}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
+            <div className="space-y-4 p-4 bg-white/40 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-purple-100/50 dark:border-purple-800/20">
+              <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-2">Additional Information</h3>
               
-              {/* Academic Level */}
-              {selectedBursary.academicLevel && selectedBursary.academicLevel.length > 0 && (
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Academic Level</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedBursary.academicLevel.map((level, index) => (
-                      <span 
-                        key={index}
-                        className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-xs text-blue-800 dark:text-blue-300 rounded-full capitalize"
-                      >
-                        {level}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Financial Need Level */}
-              <div>
-                <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Financial Need Level</h3>
-                <span className="px-2 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-xs text-emerald-800 dark:text-emerald-300 rounded-full capitalize">
-                  {selectedBursary.financialNeedLevel || 'Medium'}
-                </span>
-              </div>
-
               {/* AI Tags */}
               {selectedBursary.aiTags && selectedBursary.aiTags.length > 0 && (
                 <div>
-                  <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">AI-Generated Tags</h3>
+                  <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">AI-Generated Tags</h4>
                   <div className="flex flex-wrap gap-2">
                     {selectedBursary.aiTags.map((tag, index) => (
                       <span 
@@ -1873,6 +1833,14 @@ export default function BursariesPage() {
                   </div>
                 </div>
               )}
+              
+              {/* Financial Need Level */}
+              <div>
+                <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Financial Need Level</h4>
+                <span className="px-2 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-xs text-emerald-800 dark:text-emerald-300 rounded-full capitalize">
+                  {selectedBursary.financialNeedLevel || 'Medium'}
+                </span>
+              </div>
             </div>
             
             {/* Apply button */}
