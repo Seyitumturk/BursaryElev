@@ -104,6 +104,7 @@ export async function POST(request: NextRequest) {
         orgProfile = new OrganizationProfile({
           user: user._id,
           name: "Default Organization",
+          title: "Default Organization",
           description: "Auto-created organization profile",
           contact: {
             email: user.email || "default@example.com"
@@ -247,7 +248,7 @@ export async function GET(request: NextRequest) {
     const bursaries = await Bursary.find(query)
       .populate({
         path: "organization",
-        select: "name description contact"
+        select: "title name description contact images"
       })
       .sort({ createdAt: -1 });
     

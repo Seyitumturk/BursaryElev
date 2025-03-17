@@ -3,6 +3,7 @@ import mongoose, { Schema, Document } from "mongoose";
 export interface IOrganizationProfile extends Document {
   user: mongoose.Types.ObjectId;
   name: string;
+  title: string;
   description: string;
   contact: {
     email: string;
@@ -28,6 +29,7 @@ const OrganizationProfileSchema: Schema = new Schema(
   {
     user: { type: Schema.Types.ObjectId, ref: "User", required: true },
     name: { type: String, required: true },
+    title: { type: String },
     description: { type: String, default: "" },
     contact: {
       email: { type: String, default: "" },

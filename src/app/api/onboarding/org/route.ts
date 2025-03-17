@@ -38,6 +38,7 @@ export async function POST(request: Request) {
     const orgProfile = await OrganizationProfile.findOneAndUpdate(
       { user: userDoc._id },
       {
+        name: body.title,
         title: body.title,
         category: body.category,
         about: body.about,

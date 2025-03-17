@@ -27,7 +27,8 @@ import {
   BookOpenIcon,
   LinkIcon,
   BanknotesIcon,
-  AcademicCapIcon
+  AcademicCapIcon,
+  GlobeAltIcon
 } from "@heroicons/react/24/outline";
 import { BookmarkIcon as BookmarkOutlineIcon } from "@heroicons/react/24/outline";
 import { BookmarkIcon as BookmarkSolidIcon } from "@heroicons/react/24/solid";
@@ -52,6 +53,7 @@ interface Bursary {
   organization: {
     _id: string;
     title: string;
+    name?: string;
     images: {
       logo?: string;
     };
@@ -375,7 +377,7 @@ function AddBursaryModal({
                         value={formData.title}
                         onChange={handleChange}
                         placeholder="Enter the title of your bursary" 
-                        className="w-full pl-10 px-4 py-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#c33c33] dark:focus:ring-[#d2ac8b]"
+                        className="w-full pl-10 px-4 py-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#c33c33] dark:focus:ring-[#d2ac8b] text-gray-800 dark:text-white"
                         required
                       />
                     </div>
@@ -390,7 +392,7 @@ function AddBursaryModal({
                         value={formData.description}
                         onChange={handleChange}
                         placeholder="Describe the bursary and eligibility requirements" 
-                        className="w-full px-4 py-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#c33c33] dark:focus:ring-[#d2ac8b]"
+                        className="w-full px-4 py-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#c33c33] dark:focus:ring-[#d2ac8b] text-gray-800 dark:text-white"
                         required
                       ></textarea>
                     </div>
@@ -408,7 +410,7 @@ function AddBursaryModal({
                         value={formData.applicationUrl}
                         onChange={handleChange}
                         placeholder="https://example.com/apply" 
-                        className="w-full pl-10 px-4 py-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#c33c33] dark:focus:ring-[#d2ac8b]"
+                        className="w-full pl-10 px-4 py-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#c33c33] dark:focus:ring-[#d2ac8b] text-gray-800 dark:text-white"
                         required
                       />
                     </div>
@@ -438,7 +440,7 @@ function AddBursaryModal({
                         value={formData.awardAmount}
                         onChange={handleChange}
                         placeholder="0.00" 
-                        className="w-full pl-10 px-4 py-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#c33c33] dark:focus:ring-[#d2ac8b]"
+                        className="w-full pl-10 px-4 py-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#c33c33] dark:focus:ring-[#d2ac8b] text-gray-800 dark:text-white"
                         required
                       />
                     </div>
@@ -455,7 +457,7 @@ function AddBursaryModal({
                         name="deadline"
                         value={formData.deadline}
                         onChange={handleChange}
-                        className="w-full pl-10 px-4 py-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#c33c33] dark:focus:ring-[#d2ac8b]"
+                        className="w-full pl-10 px-4 py-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#c33c33] dark:focus:ring-[#d2ac8b] text-gray-800 dark:text-white"
                         required
                       />
                     </div>
@@ -587,7 +589,7 @@ function AddBursaryModal({
                         value={formData.eligibilityCriteria}
                         onChange={handleChange}
                         placeholder="Any additional eligibility criteria..." 
-                        className="w-full pl-10 px-4 py-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#c33c33] dark:focus:ring-[#d2ac8b]"
+                        className="w-full pl-10 px-4 py-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#c33c33] dark:focus:ring-[#d2ac8b] text-gray-800 dark:text-white"
                       ></textarea>
                     </div>
                   </div>
@@ -986,17 +988,21 @@ export default function BursariesPage() {
 
   // Add a helper function to get organization type to avoid duplication
   const getOrganizationType = (bursary: Bursary): string => {
-    if (!bursary.organization || !bursary.organization.title) {
+    if (!bursary.organization) {
       return "Education Partner";
     }
     
-    const title = bursary.organization.title;
+    const orgName = bursary.organization.title || bursary.organization.name || "";
     
-    if (title === "University of Toronto") {
+    if (!orgName) {
+      return "Education Partner";
+    }
+    
+    if (orgName === "University of Toronto") {
       return "Top University";
-    } else if (typeof title === 'string' && title.includes("Foundation")) {
+    } else if (orgName.includes("Foundation")) {
       return "Foundation";
-    } else if (typeof title === 'string' && title.includes("Scholarship")) {
+    } else if (orgName.includes("Scholarship")) {
       return "Scholarship Provider";
     } else {
       return "Education Partner";
@@ -1436,7 +1442,19 @@ export default function BursariesPage() {
                         <div>
                           {/* Organization title */}
                           <span className="text-sm font-medium text-gray-600 dark:text-gray-400 block">
-                            {bursary.organization?.title || 'Organization'}
+                            <Link 
+                              href={bursary.organization?._id ? `/organizations/${bursary.organization._id}` : '#'}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (!bursary.organization?._id) {
+                                  e.preventDefault();
+                                  console.error('No organization ID available');
+                                }
+                              }}
+                              className="hover:text-purple-600 dark:hover:text-purple-400 hover:underline"
+                            >
+                              {bursary.organization?.title || bursary.organization?.name || 'Organization'}
+                            </Link>
                           </span>
                           
                           {/* Organization type - properly placed UNDER the title */}
@@ -1571,11 +1589,23 @@ export default function BursariesPage() {
                         <div>
                           {/* Organization title */}
                           <span className="text-sm font-medium text-gray-600 dark:text-gray-400 block">
-                            {bursary.organization?.title || 'Organization'}
+                            <Link 
+                              href={bursary.organization?._id ? `/organizations/${bursary.organization._id}` : '#'}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (!bursary.organization?._id) {
+                                  e.preventDefault();
+                                  console.error('No organization ID available');
+                                }
+                              }}
+                              className="hover:text-purple-600 dark:hover:text-purple-400 hover:underline"
+                            >
+                              {bursary.organization?.title || bursary.organization?.name || 'Organization'}
+                            </Link>
                           </span>
                           
                           {/* Organization type - properly placed UNDER the title */}
-                          <span className="text-xs text-indigo-600 dark:text-indigo-400 font-medium block mt-0.5 mb-1.5">
+                          <span className="text-xs text-indigo-600 dark:text-indigo-400 font-medium block mt-1">
                             {getOrganizationType(bursary)}
                           </span>
                           
@@ -1663,18 +1693,45 @@ export default function BursariesPage() {
               </div>
               <div>
                 <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                  {selectedBursary.organization.title}
-                </h3>
-                {selectedBursary.organization.contact?.website && (
-                  <a 
-                    href={selectedBursary.organization.contact.website}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm text-purple-600 hover:text-purple-800 dark:text-purple-400 dark:hover:text-purple-300"
+                  <Link 
+                    href={selectedBursary.organization?._id ? `/organizations/${selectedBursary.organization._id}` : '#'}
+                    onClick={(e) => {
+                      if (!selectedBursary.organization?._id) {
+                        e.preventDefault();
+                        console.error('No organization ID available');
+                      }
+                    }}
+                    className="hover:text-purple-600 dark:hover:text-purple-400 hover:underline"
                   >
-                    Visit Website
-                  </a>
-                )}
+                    {selectedBursary.organization.title || selectedBursary.organization.name || 'Organization'}
+                  </Link>
+                </h3>
+                <div className="flex items-center gap-3 mt-1 flex-wrap">
+                  {selectedBursary.organization.contact?.website && (
+                    <a 
+                      href={selectedBursary.organization.contact.website}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-purple-600 hover:text-purple-800 dark:text-purple-400 dark:hover:text-purple-300 flex items-center"
+                    >
+                      <GlobeAltIcon className="h-3.5 w-3.5 mr-1" />
+                      Visit Website
+                    </a>
+                  )}
+                  <Link 
+                    href={selectedBursary.organization?._id ? `/organizations/${selectedBursary.organization._id}` : '#'}
+                    onClick={(e) => {
+                      if (!selectedBursary.organization?._id) {
+                        e.preventDefault();
+                        console.error('No organization ID available');
+                      }
+                    }}
+                    className="text-sm text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 flex items-center"
+                  >
+                    <BuildingOffice2Icon className="h-3.5 w-3.5 mr-1" />
+                    View Profile
+                  </Link>
+                </div>
               </div>
             </div>
             

@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
 import "./globals.css";
 import SyncUser from "../components/SyncUser";
+import { ThemeProvider } from '@/providers/ThemeProvider'
+import { Toaster } from 'react-hot-toast'
 
 export const metadata: Metadata = {
   title: "EleV Bursary Platform",
@@ -14,15 +16,18 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <ClerkProvider>
-      <SyncUser />
-      <html lang="en">
-        <body className="min-h-screen bg-gradient-to-br from-[#f4ece4] to-[#e8dccc] dark:from-gray-900 dark:to-gray-800">
-          <div className="min-h-screen flex flex-col">
-            {children}
-          </div>
-        </body>
-      </html>
-    </ClerkProvider>
+    <html lang="en">
+      <body className="min-h-screen bg-gradient-to-br from-[#f4ece4] to-[#e8dccc] dark:from-gray-900 dark:to-gray-800">
+        <ClerkProvider>
+          <SyncUser />
+          <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+            <div className="min-h-screen flex flex-col">
+              {children}
+            </div>
+            <Toaster position="top-right" />
+          </ThemeProvider>
+        </ClerkProvider>
+      </body>
+    </html>
   );
 }

@@ -4,6 +4,27 @@ import Link from "next/link";
 export default function Home() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      {/* Header Navigation */}
+      <header className="bg-white dark:bg-gray-800 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between h-16 items-center">
+            <div className="flex-shrink-0">
+              <Link href="/" className="font-bold text-xl text-blue-600">
+                Bursary Matching
+              </Link>
+            </div>
+            <div className="flex items-center space-x-4">
+              <Link href="/sign-in" className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400">
+                Sign In
+              </Link>
+              <Link href="/sign-up" className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                Sign Up
+              </Link>
+            </div>
+          </div>
+        </div>
+      </header>
+
       {/* Hero Section */}
       <section className="px-4 py-20 sm:px-6 lg:px-8 bg-gradient-to-b from-blue-50 to-white dark:from-gray-800 dark:to-gray-700">
         <div className="max-w-7xl mx-auto text-center">
@@ -16,6 +37,9 @@ export default function Home() {
           <div className="mt-10 flex justify-center gap-x-6">
             <Link href="/sign-up" className="px-8 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700">
               Get Started
+            </Link>
+            <Link href="/sign-in" className="px-8 py-3 bg-gray-700 text-white rounded-md hover:bg-gray-800">
+              Sign In
             </Link>
             <Link href="/about" className="px-8 py-3 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300">
               Learn More

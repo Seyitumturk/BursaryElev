@@ -231,7 +231,7 @@ const CreateBursaryPage = () => {
               name="title"
               value={formData.title}
               onChange={handleChange}
-              className="w-full border border-gray-300 rounded-md shadow-sm px-3 py-2"
+              className="w-full border border-gray-300 rounded-md shadow-sm px-3 py-2 text-gray-800 dark:text-white"
               required
             />
           </div>
@@ -246,7 +246,7 @@ const CreateBursaryPage = () => {
               value={formData.description}
               onChange={handleChange}
               rows={4}
-              className="w-full border border-gray-300 rounded-md shadow-sm px-3 py-2"
+              className="w-full border border-gray-300 rounded-md shadow-sm px-3 py-2 text-gray-800 dark:text-white"
               required
             />
           </div>
@@ -261,7 +261,7 @@ const CreateBursaryPage = () => {
               name="applicationUrl"
               value={formData.applicationUrl}
               onChange={handleChange}
-              className="w-full border border-gray-300 rounded-md shadow-sm px-3 py-2"
+              className="w-full border border-gray-300 rounded-md shadow-sm px-3 py-2 text-gray-800 dark:text-white"
               required
             />
           </div>
@@ -278,7 +278,7 @@ const CreateBursaryPage = () => {
                 name="deadline"
                 value={formData.deadline}
                 onChange={handleChange}
-                className="w-full border border-gray-300 rounded-md shadow-sm px-3 py-2"
+                className="w-full border border-gray-300 rounded-md shadow-sm px-3 py-2 text-gray-800 dark:text-white"
                 required
               />
             </div>
@@ -293,7 +293,7 @@ const CreateBursaryPage = () => {
                 name="awardAmount"
                 value={formData.awardAmount}
                 onChange={handleChange}
-                className="w-full border border-gray-300 rounded-md shadow-sm px-3 py-2"
+                className="w-full border border-gray-300 rounded-md shadow-sm px-3 py-2 text-gray-800 dark:text-white"
                 min="0"
                 step="0.01"
                 required
@@ -311,7 +311,7 @@ const CreateBursaryPage = () => {
               value={formData.eligibilityCriteria}
               onChange={handleChange}
               rows={3}
-              className="w-full border border-gray-300 rounded-md shadow-sm px-3 py-2"
+              className="w-full border border-gray-300 rounded-md shadow-sm px-3 py-2 text-gray-800 dark:text-white"
             />
           </div>
           
@@ -327,7 +327,7 @@ const CreateBursaryPage = () => {
                 multiple
                 value={formData.fieldOfStudy}
                 onChange={handleMultiSelectChange}
-                className="w-full border border-gray-300 rounded-md shadow-sm px-3 py-2 h-32"
+                className="w-full border border-gray-300 rounded-md shadow-sm px-3 py-2 text-gray-800 dark:text-white h-32"
               >
                 {FIELD_OF_STUDY_OPTIONS.map(option => (
                   <option key={option} value={option}>{option}</option>
@@ -346,7 +346,7 @@ const CreateBursaryPage = () => {
                 multiple
                 value={formData.academicLevel}
                 onChange={handleMultiSelectChange}
-                className="w-full border border-gray-300 rounded-md shadow-sm px-3 py-2 h-32"
+                className="w-full border border-gray-300 rounded-md shadow-sm px-3 py-2 text-gray-800 dark:text-white h-32"
               >
                 {ACADEMIC_LEVEL_OPTIONS.map(option => (
                   <option key={option} value={option}>{option}</option>
@@ -365,7 +365,7 @@ const CreateBursaryPage = () => {
               name="financialNeedLevel"
               value={formData.financialNeedLevel}
               onChange={handleChange}
-              className="w-full border border-gray-300 rounded-md shadow-sm px-3 py-2"
+              className="w-full border border-gray-300 rounded-md shadow-sm px-3 py-2 text-gray-800 dark:text-white"
             >
               <option value="low">Low</option>
               <option value="medium">Medium</option>

@@ -56,12 +56,12 @@ export default function DashboardLayout({
   // Show dashboard if authenticated
   if (sessionId) {
     return (
-      <div className="min-h-screen flex bg-gradient-to-br from-[#f4ece4] to-[#e8dccc] dark:from-[var(--background)] dark:to-[#3d2a20]">
+      <div className="min-h-screen flex bg-gradient-to-br from-[#f4ece4] to-[#e8dccc] dark:from-[var(--background)] dark:to-[#3d2a20] overflow-hidden">
         {/* Left sidebar for navigation */}
         <Sidebar links={dashboardLinks} position="left" />
         
         {/* Main content area with header */}
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col h-screen overflow-hidden">
           <Header />
           <main className="flex-1 p-6 overflow-y-auto">
             <div className="w-full">
