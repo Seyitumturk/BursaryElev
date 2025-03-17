@@ -4,11 +4,20 @@ export interface IOrganizationProfile extends Document {
   user: mongoose.Types.ObjectId;
   name: string;
   title: string;
+  about: string;
+  mission: string;
+  category: string;
   description: string;
   contact: {
     email: string;
     phone?: string;
+    officeNumber?: string;
+    alternativePhone?: string;
     website?: string;
+    address?: string;
+    province?: string;
+    city?: string;
+    postalCode?: string;
     socialMedia?: {
       twitter?: string;
       facebook?: string;
@@ -30,11 +39,20 @@ const OrganizationProfileSchema: Schema = new Schema(
     user: { type: Schema.Types.ObjectId, ref: "User", required: true },
     name: { type: String, required: true },
     title: { type: String },
+    about: { type: String, default: "" },
+    mission: { type: String, default: "" },
+    category: { type: String, default: "" },
     description: { type: String, default: "" },
     contact: {
       email: { type: String, default: "" },
       phone: { type: String },
+      officeNumber: { type: String },
+      alternativePhone: { type: String },
       website: { type: String },
+      address: { type: String },
+      province: { type: String },
+      city: { type: String },
+      postalCode: { type: String },
       socialMedia: {
         twitter: { type: String },
         facebook: { type: String },

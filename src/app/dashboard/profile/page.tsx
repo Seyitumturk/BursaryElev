@@ -12,6 +12,10 @@ import {
 import { toast } from 'react-hot-toast';
 
 interface Profile {
+  _id?: string;
+  // Common fields
+  user?: string;
+  
   // Student profile fields
   institution?: string;
   major?: string;
@@ -20,18 +24,21 @@ interface Profile {
   bio?: string;
   
   // Organization profile fields
+  name?: string;
   title?: string;
-  category?: string;
+  description?: string;
   about?: string;
+  category?: string;
   mission?: string;
   contact?: {
+    email?: string;
+    phone?: string;
     address?: string;
     province?: string;
     city?: string;
     postalCode?: string;
     officeNumber?: string;
     alternativePhone?: string;
-    email?: string;
     website?: string;
     socialMedia?: {
       twitter?: string;
@@ -39,6 +46,14 @@ interface Profile {
       linkedin?: string;
     };
   };
+  address?: {
+    street?: string;
+    city?: string;
+    state?: string;
+    zipCode?: string;
+    country?: string;
+  };
+  status?: "pending" | "active";
 }
 
 export default function ProfilePage() {
@@ -58,6 +73,9 @@ export default function ProfilePage() {
   // Determine the effective role: API role (if available) or fallback from Clerk
   const roleFromClerk = (user && user.publicMetadata) ? user.publicMetadata.role : "student";
   const effectiveRole = dbRole || roleFromClerk;
+
+  // Create a form reference for the entire profile form
+  const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
     async function fetchProfile() {
@@ -92,70 +110,63 @@ export default function ProfilePage() {
     if (isEditing) {
       // Cancel editing, revert to original data
       setEditableProfile(profile ? {...profile} : null);
+      setIsEditing(false);
+    } else {
+      // Enter edit mode with a fresh copy of profile data
+      setEditableProfile(profile ? {...profile} : null);
+      setIsEditing(true);
     }
-    setIsEditing(!isEditing);
   };
 
-  const handleInputChange = (field: string, value: string) => {
-    if (!editableProfile) return;
+  // Simplified save profile handler that gets all form values at once
+  const handleSaveProfile = async (event?: React.FormEvent) => {
+    if (event) {
+      event.preventDefault();
+    }
     
-    // Use a callback to avoid state update closure issues
-    setEditableProfile(prevProfile => {
-      if (!prevProfile) return null;
-      
-      // Create a new object to avoid reference equality issues
-      const newProfile = { ...prevProfile };
-      newProfile[field] = value;
-      
-      return newProfile;
-    });
-  };
-
-  const handleContactChange = (field: string, value: string) => {
-    if (!editableProfile) return;
-    
-    setEditableProfile(prevProfile => {
-      if (!prevProfile) return null;
-      
-      // Create deep copies to avoid reference equality issues
-      return {
-        ...prevProfile,
-        contact: {
-          ...prevProfile.contact,
-          [field]: value
-        }
-      };
-    });
-  };
-
-  const handleSocialMediaChange = (platform: string, value: string) => {
-    if (!editableProfile) return;
-    
-    setEditableProfile(prevProfile => {
-      if (!prevProfile) return null;
-      
-      // Create deep copies for nested objects
-      return {
-        ...prevProfile,
-        contact: {
-          ...prevProfile.contact,
-          socialMedia: {
-            ...prevProfile.contact?.socialMedia,
-            [platform]: value
-          }
-        }
-      };
-    });
-  };
-
-  const handleSaveProfile = async () => {
-    if (!editableProfile) return;
+    if (!formRef.current || !editableProfile) return;
     
     setIsSaving(true);
     
     try {
-      // Create a local copy to avoid state issues
-      const profileToSave = JSON.parse(JSON.stringify(editableProfile));
+      // Get the current form data directly from the form fields
+      const formData = new FormData(formRef.current);
+      
+      // Create a profile object that matches the schema structure
+      const profileToSave = {...editableProfile};
+      
+      // Clear the contact object to start fresh with form data
+      if (activeTab === "contact") {
+        profileToSave.contact = {};
+      }
+      
+      // Process all form fields
+      formData.forEach((value, key) => {
+        if (key.startsWith('contact.socialMedia.')) {
+          const platform = key.split('.')[2];
+          if (!profileToSave.contact) profileToSave.contact = {};
+          if (!profileToSave.contact.socialMedia) profileToSave.contact.socialMedia = {};
+          // Type-safe way to set social media fields
+          if (platform === 'twitter' || platform === 'facebook' || platform === 'linkedin') {
+            profileToSave.contact.socialMedia[platform] = value as string;
+          }
+        }
+        else if (key.startsWith('contact.')) {
+          const field = key.split('.')[1];
+          if (!profileToSave.contact) profileToSave.contact = {};
+          // Set the contact field in a type-safe way
+          profileToSave.contact = {
+            ...profileToSave.contact,
+            [field]: value as string
+          };
+        }
+        else {
+          // For regular fields, use a type assertion
+          (profileToSave as any)[key] = value as string;
+        }
+      });
+      
+      console.log("SAVING PROFILE DATA:", JSON.stringify(profileToSave, null, 2));
       
       const response = await fetch('/api/profile', {
         method: 'PUT',
@@ -166,8 +177,8 @@ export default function ProfilePage() {
       });
       
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to save profile');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to save profile');
       }
       
       const data = await response.json();
@@ -222,7 +233,9 @@ export default function ProfilePage() {
       if (profile.interests) completedFields++;
       if (profile.bio) completedFields++;
     } else {
-      totalFields = 4; // title, category, about, mission
+      // Organization profile basic fields
+      totalFields = 5; // name, title, category, about, mission
+      if (profile.name) completedFields++;
       if (profile.title) completedFields++;
       if (profile.category) completedFields++;
       if (profile.about) completedFields++;
@@ -231,10 +244,10 @@ export default function ProfilePage() {
       // Contact fields
       if (profile.contact) {
         totalFields += 5; // Basic contact fields
-        if (profile.contact.address) completedFields++;
-        if (profile.contact.city) completedFields++;
         if (profile.contact.email) completedFields++;
         if (profile.contact.officeNumber) completedFields++;
+        if (profile.contact.address) completedFields++;
+        if (profile.contact.city) completedFields++;
         if (profile.contact.website) completedFields++;
       }
     }
@@ -242,48 +255,36 @@ export default function ProfilePage() {
     return Math.round((completedFields / totalFields) * 100);
   };
 
-  // Complete rewrite of the EditableField component using uncontrolled inputs
+  // Simple field component using defaultValue instead of value for better typing performance
   const EditableField = ({ 
     label, 
     value, 
     fieldName, 
     isTextarea = false,
-    onChange 
+    readOnly = false
   }: { 
     label: string, 
     value: string | undefined, 
     fieldName: string,
     isTextarea?: boolean,
-    onChange: (field: string, value: string) => void 
+    readOnly?: boolean
   }) => {
-    // Use a ref to access the input value directly
-    const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
-    
-    // Update the parent component's state on blur
-    const handleBlur = () => {
-      if (inputRef.current) {
-        onChange(fieldName, inputRef.current.value);
-      }
-    };
-    
     return (
       <div>
         <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">{label}</p>
-        {isEditing ? (
+        {isEditing && !readOnly ? (
           isTextarea ? (
             <textarea
-              ref={inputRef as React.RefObject<HTMLTextAreaElement>}
+              name={fieldName}
               defaultValue={value || ''}
-              onBlur={handleBlur}
               className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-[#3d2a20] dark:text-white p-3 text-base"
               rows={5}
-            ></textarea>
+            />
           ) : (
             <input
-              ref={inputRef as React.RefObject<HTMLInputElement>}
               type="text"
+              name={fieldName}
               defaultValue={value || ''}
-              onBlur={handleBlur}
               className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-[#3d2a20] dark:text-white p-3 h-12 text-base"
             />
           )
@@ -294,50 +295,30 @@ export default function ProfilePage() {
     );
   };
 
-  // Complete rewrite of SocialMediaInput component using uncontrolled inputs
+  // Simple SocialMediaInput component using defaultValue
   const SocialMediaInput = ({
     platform,
     value,
-    onChange,
     placeholder,
     isEditing
   }: {
     platform: string;
     value: string | undefined;
-    onChange: (platform: string, value: string) => void;
     placeholder: string;
     isEditing: boolean;
   }) => {
-    // Use a ref to access the input value directly
-    const inputRef = useRef<HTMLInputElement>(null);
-    
-    // Update the parent component's state on blur
-    const handleBlur = () => {
-      if (inputRef.current) {
-        onChange(platform, inputRef.current.value);
-      }
-    };
-    
-    return (
+    return isEditing ? (
       <input
-        ref={inputRef}
         type="text"
+        name={`contact.socialMedia.${platform}`}
         defaultValue={value || ''}
-        onBlur={handleBlur}
         className="block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-[#3d2a20] dark:text-white p-3 h-12 text-base"
         placeholder={placeholder}
-        disabled={!isEditing}
       />
+    ) : (
+      <p className="mt-1 text-gray-900 dark:text-white">{value || "Not specified"}</p>
     );
   };
-
-  // Also update the key when toggling edit mode to force new instances of inputs
-  useEffect(() => {
-    if (isEditing && profile) {
-      // Reset editable profile to current profile when entering edit mode
-      setEditableProfile({...profile});
-    }
-  }, [isEditing, profile]);
 
   return (
     <div className="bg-gray-50 dark:bg-[#3d2a20] h-full overflow-y-auto">
@@ -376,7 +357,14 @@ export default function ProfilePage() {
                       {isEditing ? (
                         <>
                           <button 
-                            onClick={handleSaveProfile}
+                            onClick={() => {
+                              if (formRef.current) {
+                                // Simulate a form submission
+                                const submitEvent = new Event('submit', {bubbles: true, cancelable: true});
+                                formRef.current.dispatchEvent(submitEvent);
+                                handleSaveProfile();
+                              }
+                            }}
                             disabled={isSaving}
                             className="inline-flex items-center px-6 py-3 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 dark:bg-[#5b3d2e] dark:hover:bg-[#4a3226] dark:focus:ring-[var(--light-brown-1)] transition-colors duration-200"
                           >
@@ -500,7 +488,11 @@ export default function ProfilePage() {
                 <>
                   {/* About Tab */}
                   {activeTab === "about" && (
-                    <div className="space-y-8">
+                    <form 
+                      ref={formRef} 
+                      className="space-y-8" 
+                      onSubmit={handleSaveProfile}
+                    >
                       {effectiveRole === "student" ? (
                         <>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -514,19 +506,16 @@ export default function ProfilePage() {
                                   label="Institution" 
                                   value={editableProfile.institution} 
                                   fieldName="institution"
-                                  onChange={handleInputChange}
                                 />
                                 <EditableField 
                                   label="Major" 
                                   value={editableProfile.major} 
                                   fieldName="major"
-                                  onChange={handleInputChange}
                                 />
                                 <EditableField 
                                   label="Graduation Year" 
                                   value={editableProfile.graduationYear} 
                                   fieldName="graduationYear"
-                                  onChange={handleInputChange}
                                 />
                               </div>
                             </div>
@@ -540,14 +529,12 @@ export default function ProfilePage() {
                                   label="Interests" 
                                   value={editableProfile.interests} 
                                   fieldName="interests"
-                                  onChange={handleInputChange}
                                 />
                                 <EditableField 
                                   label="Bio" 
                                   value={editableProfile.bio} 
                                   fieldName="bio"
                                   isTextarea={true}
-                                  onChange={handleInputChange}
                                 />
                               </div>
                             </div>
@@ -564,30 +551,38 @@ export default function ProfilePage() {
                               <div className="space-y-4">
                                 <EditableField 
                                   label="Organization Name" 
+                                  value={editableProfile.name} 
+                                  fieldName="name"
+                                />
+                                <EditableField 
+                                  label="Title" 
                                   value={editableProfile.title} 
                                   fieldName="title"
-                                  onChange={handleInputChange}
                                 />
                                 <EditableField 
                                   label="Category" 
                                   value={editableProfile.category} 
                                   fieldName="category"
-                                  onChange={handleInputChange}
                                 />
                               </div>
                             </div>
                             <div className="bg-amber-50 dark:bg-[#5b3d2e]/50 rounded-lg p-6 shadow-sm border border-amber-100 dark:border-[#d2ac8b]/30">
                               <div className="flex items-center mb-4">
                                 <StarIcon className="h-6 w-6 text-amber-600 dark:text-[var(--light-brown-1)]" />
-                                <h3 className="ml-2 text-lg font-medium text-gray-900 dark:text-white">Mission</h3>
+                                <h3 className="ml-2 text-lg font-medium text-gray-900 dark:text-white">Description & Mission</h3>
                               </div>
-                              <div>
+                              <div className="space-y-4">
                                 <EditableField 
-                                  label="Mission Statement" 
+                                  label="About" 
+                                  value={editableProfile.about} 
+                                  fieldName="about"
+                                  isTextarea={true}
+                                />
+                                <EditableField 
+                                  label="Mission" 
                                   value={editableProfile.mission} 
                                   fieldName="mission"
                                   isTextarea={true}
-                                  onChange={handleInputChange}
                                 />
                               </div>
                             </div>
@@ -595,26 +590,65 @@ export default function ProfilePage() {
                           <div className="bg-indigo-50 dark:bg-[#5b3d2e]/50 rounded-lg p-6 shadow-sm border border-indigo-100 dark:border-[#d2ac8b]/30">
                             <div className="flex items-center mb-4">
                               <DocumentTextIcon className="h-6 w-6 text-indigo-600 dark:text-[var(--light-brown-1)]" />
-                              <h3 className="ml-2 text-lg font-medium text-gray-900 dark:text-white">About</h3>
+                              <h3 className="ml-2 text-lg font-medium text-gray-900 dark:text-white">Status</h3>
                             </div>
                             <div>
-                              <EditableField 
-                                label="About Organization" 
-                                value={editableProfile.about} 
-                                fieldName="about"
-                                isTextarea={true}
-                                onChange={handleInputChange}
-                              />
+                              {isEditing ? (
+                                <div>
+                                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Status</p>
+                                  <select
+                                    name="status"
+                                    defaultValue={editableProfile.status || 'active'}
+                                    className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-[#3d2a20] dark:text-white p-3 h-12 text-base"
+                                  >
+                                    <option value="active">Active</option>
+                                    <option value="pending">Pending</option>
+                                  </select>
+                                </div>
+                              ) : (
+                                <div>
+                                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Status</p>
+                                  <p className="mt-1 text-gray-900 dark:text-white capitalize">
+                                    {editableProfile.status || 'Active'}
+                                  </p>
+                                </div>
+                              )}
                             </div>
                           </div>
                         </>
                       )}
-                    </div>
+                      
+                      {isEditing && (
+                        <div className="flex justify-end space-x-3 mt-6">
+                          <button 
+                            type="button"
+                            onClick={handleEditToggle}
+                            disabled={isSaving}
+                            className="inline-flex items-center px-6 py-3 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-[#3d2a20] dark:text-[var(--light-brown-2)] dark:border-[#5b3d2e] dark:hover:bg-[#4a3226] transition-colors duration-200"
+                          >
+                            <XMarkIcon className="h-5 w-5 mr-2" />
+                            Cancel
+                          </button>
+                          <button 
+                            type="submit"
+                            disabled={isSaving}
+                            className="inline-flex items-center px-6 py-3 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 dark:bg-[#5b3d2e] dark:hover:bg-[#4a3226] dark:focus:ring-[var(--light-brown-1)] transition-colors duration-200"
+                          >
+                            <CheckIcon className="h-5 w-5 mr-2" />
+                            {isSaving ? 'Saving...' : 'Save Changes'}
+                          </button>
+                        </div>
+                      )}
+                    </form>
                   )}
 
                   {/* Contact Information Tab */}
                   {activeTab === "contact" && effectiveRole !== "student" && (
-                    <div className="space-y-8">
+                    <form 
+                      ref={formRef} 
+                      className="space-y-8"
+                      onSubmit={handleSaveProfile}
+                    >
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="bg-teal-50 dark:bg-[#5b3d2e]/50 rounded-lg p-6 shadow-sm border border-teal-100 dark:border-[#d2ac8b]/30">
                           <div className="flex items-center mb-4">
@@ -625,28 +659,24 @@ export default function ProfilePage() {
                             <EditableField 
                               label="Address" 
                               value={editableProfile.contact?.address} 
-                              fieldName="address"
-                              onChange={handleContactChange}
+                              fieldName="contact.address"
                             />
                             <div className="grid grid-cols-2 gap-4">
                               <EditableField 
                                 label="City" 
                                 value={editableProfile.contact?.city} 
-                                fieldName="city"
-                                onChange={handleContactChange}
+                                fieldName="contact.city"
                               />
                               <EditableField 
                                 label="Province" 
                                 value={editableProfile.contact?.province} 
-                                fieldName="province"
-                                onChange={handleContactChange}
+                                fieldName="contact.province"
                               />
                             </div>
                             <EditableField 
                               label="Postal Code" 
                               value={editableProfile.contact?.postalCode} 
-                              fieldName="postalCode"
-                              onChange={handleContactChange}
+                              fieldName="contact.postalCode"
                             />
                           </div>
                         </div>
@@ -659,20 +689,17 @@ export default function ProfilePage() {
                             <EditableField 
                               label="Email" 
                               value={editableProfile.contact?.email} 
-                              fieldName="email"
-                              onChange={handleContactChange}
+                              fieldName="contact.email"
                             />
                             <EditableField 
-                              label="Office Phone" 
+                              label="Office Number" 
                               value={editableProfile.contact?.officeNumber} 
-                              fieldName="officeNumber"
-                              onChange={handleContactChange}
+                              fieldName="contact.officeNumber"
                             />
                             <EditableField 
                               label="Alternative Phone" 
                               value={editableProfile.contact?.alternativePhone} 
-                              fieldName="alternativePhone"
-                              onChange={handleContactChange}
+                              fieldName="contact.alternativePhone"
                             />
                           </div>
                         </div>
@@ -686,8 +713,7 @@ export default function ProfilePage() {
                           <EditableField 
                             label="Website" 
                             value={editableProfile.contact?.website} 
-                            fieldName="website"
-                            onChange={handleContactChange}
+                            fieldName="contact.website"
                           />
                           <div className="space-y-4">
                             <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Social Media</p>
@@ -702,7 +728,6 @@ export default function ProfilePage() {
                                 <SocialMediaInput
                                   platform="twitter"
                                   value={editableProfile.contact?.socialMedia?.twitter}
-                                  onChange={handleSocialMediaChange}
                                   placeholder="username"
                                   isEditing={isEditing}
                                 />
@@ -717,7 +742,6 @@ export default function ProfilePage() {
                                 <SocialMediaInput
                                   platform="facebook"
                                   value={editableProfile.contact?.socialMedia?.facebook}
-                                  onChange={handleSocialMediaChange}
                                   placeholder="username or page"
                                   isEditing={isEditing}
                                 />
@@ -732,7 +756,6 @@ export default function ProfilePage() {
                                 <SocialMediaInput
                                   platform="linkedin"
                                   value={editableProfile.contact?.socialMedia?.linkedin}
-                                  onChange={handleSocialMediaChange}
                                   placeholder="username"
                                   isEditing={isEditing}
                                 />
@@ -741,7 +764,29 @@ export default function ProfilePage() {
                           </div>
                         </div>
                       </div>
-                    </div>
+                      
+                      {isEditing && (
+                        <div className="flex justify-end space-x-3 mt-6">
+                          <button 
+                            type="button"
+                            onClick={handleEditToggle}
+                            disabled={isSaving}
+                            className="inline-flex items-center px-6 py-3 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-[#3d2a20] dark:text-[var(--light-brown-2)] dark:border-[#5b3d2e] dark:hover:bg-[#4a3226] transition-colors duration-200"
+                          >
+                            <XMarkIcon className="h-5 w-5 mr-2" />
+                            Cancel
+                          </button>
+                          <button 
+                            type="submit"
+                            disabled={isSaving}
+                            className="inline-flex items-center px-6 py-3 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 dark:bg-[#5b3d2e] dark:hover:bg-[#4a3226] dark:focus:ring-[var(--light-brown-1)] transition-colors duration-200"
+                          >
+                            <CheckIcon className="h-5 w-5 mr-2" />
+                            {isSaving ? 'Saving...' : 'Save Changes'}
+                          </button>
+                        </div>
+                      )}
+                    </form>
                   )}
 
                   {/* Activity Tab */}
