@@ -28,7 +28,9 @@ import {
   LinkIcon,
   BanknotesIcon,
   AcademicCapIcon,
-  GlobeAltIcon
+  GlobeAltIcon,
+  QuestionMarkCircleIcon,
+  SparklesIcon
 } from "@heroicons/react/24/outline";
 import { BookmarkIcon as BookmarkOutlineIcon } from "@heroicons/react/24/outline";
 import { BookmarkIcon as BookmarkSolidIcon } from "@heroicons/react/24/solid";
@@ -718,6 +720,10 @@ export default function BursariesPage() {
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deleteSuccess, setDeleteSuccess] = useState<string | null>(null);
   const router = useRouter();
+  const [matches, setMatches] = useState<any[]>([]);
+  const [matchesLoaded, setMatchesLoaded] = useState(false);
+  const [bursarySummary, setBursarySummary] = useState<string | null>(null);
+  const [summaryLoading, setSummaryLoading] = useState(false);
 
   // Get user role and org ID from localStorage
   useEffect(() => {
@@ -773,6 +779,11 @@ export default function BursariesPage() {
         console.log(`Fetched ${data.length} bursaries`);
         setBursaries(data);
         setFilteredBursaries(data);
+        
+        // If user is a student, fetch matches
+        if (userRole === 'student') {
+          fetchMatches();
+        }
       } catch (error) {
         console.error("Error fetching bursaries:", error);
         setError("Failed to load bursaries. Please try again later.");
@@ -782,7 +793,7 @@ export default function BursariesPage() {
     };
     
     fetchBursaries();
-  }, [filterOption]); // Add filterOption as a dependency to refetch when it changes
+  }, [filterOption, userRole]); // Add userRole as a dependency
 
   // Toggle bookmark for a bursary
   const toggleBookmark = (e: React.MouseEvent, bursaryId: string) => {
@@ -1064,6 +1075,44 @@ export default function BursariesPage() {
       }, 3000);
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  // Add this function to fetch matches
+  const fetchMatches = async () => {
+    try {
+      const response = await fetch('/api/bursaries/matches?includeAI=true');
+      
+      if (!response.ok) {
+        throw new Error(`Error fetching matches: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      setMatches(data.matches || []);
+      setMatchesLoaded(true);
+    } catch (err) {
+      console.error('Failed to fetch matches:', err);
+    }
+  };
+
+  const fetchBursarySummary = async (bursaryId: string) => {
+    try {
+      setSummaryLoading(true);
+      // Get the actual origin of the running application
+      const origin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
+      const response = await fetch(`${origin}/api/summary?type=bursary&id=${bursaryId}`);
+      
+      if (!response.ok) {
+        throw new Error(`Error fetching bursary summary: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      setBursarySummary(data.summary);
+    } catch (error) {
+      console.error("Failed to fetch bursary summary:", error);
+      setBursarySummary("Unable to generate AI summary at this time.");
+    } finally {
+      setSummaryLoading(false);
     }
   };
 
@@ -1508,6 +1557,42 @@ export default function BursariesPage() {
                       {bursary.description}
                     </p>
                     
+                    {/* Match score - only show for student users */}
+                    {userRole === "student" && matchesLoaded && (
+                      <div className="mb-4">
+                        {(() => {
+                          const match = matches.find(m => m.bursary._id === bursary._id);
+                          if (match) {
+                            return (
+                              <>
+                                <div className="flex items-center mb-2">
+                                  <div className="w-24 h-2 bg-gray-200 rounded-full mr-2 overflow-hidden">
+                                    <div 
+                                      className="h-full bg-blue-500 rounded-full" 
+                                      style={{ width: `${match.matchScore.combinedScore || match.matchScore.total}%` }}
+                                    />
+                                  </div>
+                                  <span className={`text-sm font-medium ${
+                                    (match.matchScore.combinedScore || match.matchScore.total) >= 80 ? "text-green-600 dark:text-green-400" : 
+                                    (match.matchScore.combinedScore || match.matchScore.total) >= 60 ? "text-yellow-600 dark:text-yellow-400" : 
+                                    "text-gray-600 dark:text-gray-400"
+                                  }`}>
+                                    {match.matchScore.combinedScore || match.matchScore.total}% Match
+                                  </span>
+                                </div>
+                                {match.matchScore.aiMatchExplanation && (
+                                  <div className="mt-2 text-sm text-gray-600 dark:text-gray-400 border-l-2 border-purple-400 pl-2">
+                                    {match.matchScore.aiMatchExplanation}
+                                  </div>
+                                )}
+                              </>
+                            );
+                          }
+                          return null;
+                        })()}
+                      </div>
+                    )}
+                    
                     {/* Tags and categories */}
                     {(bursary.fieldOfStudy?.length > 0 || bursary.aiTags?.length > 0) && (
                       <div className="flex flex-wrap gap-2 mb-4">
@@ -1616,6 +1701,42 @@ export default function BursariesPage() {
                           <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-2 mt-1">
                             {bursary.description}
                           </p>
+                          
+                          {/* Match score - only show for student users (list view) */}
+                          {userRole === "student" && matchesLoaded && (
+                            <div className="mt-2">
+                              {(() => {
+                                const match = matches.find(m => m.bursary._id === bursary._id);
+                                if (match) {
+                                  return (
+                                    <>
+                                      <div className="flex items-center">
+                                        <div className="w-20 h-2 bg-gray-200 rounded-full mr-1.5 overflow-hidden">
+                                          <div 
+                                            className="h-full bg-blue-500 rounded-full" 
+                                            style={{ width: `${match.matchScore.combinedScore || match.matchScore.total}%` }}
+                                          />
+                                        </div>
+                                        <span className={`text-xs font-medium ${
+                                          (match.matchScore.combinedScore || match.matchScore.total) >= 80 ? "text-green-600 dark:text-green-400" : 
+                                          (match.matchScore.combinedScore || match.matchScore.total) >= 60 ? "text-yellow-600 dark:text-yellow-400" : 
+                                          "text-gray-600 dark:text-gray-400"
+                                        }`}>
+                                          {match.matchScore.combinedScore || match.matchScore.total}% Match
+                                        </span>
+                                      </div>
+                                      {match.matchScore.aiMatchExplanation && (
+                                        <div className="mt-1 text-xs text-gray-600 dark:text-gray-400 border-l-2 border-purple-400 pl-2 line-clamp-2">
+                                          {match.matchScore.aiMatchExplanation}
+                                        </div>
+                                      )}
+                                    </>
+                                  );
+                                }
+                                return null;
+                              })()}
+                            </div>
+                          )}
                         </div>
                       </div>
                       
@@ -1899,6 +2020,142 @@ export default function BursariesPage() {
                 </span>
               </div>
             </div>
+            
+            {/* Match explanation - only for student users */}
+            {userRole === "student" && matchesLoaded && (() => {
+              const match = matches.find(m => m.bursary._id === selectedBursary._id);
+              if (match) {
+                return (
+                  <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800/20">
+                    <h3 className="font-medium text-blue-800 dark:text-blue-300 mb-3 flex items-center">
+                      <QuestionMarkCircleIcon className="w-5 h-5 mr-1" />
+                      Match Analysis
+                    </h3>
+                    
+                    {/* AI-generated explanation - Show prominently at the top */}
+                    {match.matchScore.aiMatchScore !== undefined && (
+                      <div className="mb-4 p-3 bg-white dark:bg-blue-900/30 rounded-lg border border-blue-100 dark:border-blue-800/30">
+                        <h4 className="text-sm font-medium text-purple-600 dark:text-purple-400 mb-2 flex items-center">
+                          <SparklesIcon className="w-4 h-4 mr-1" />
+                          AI Match Analysis
+                        </h4>
+                        <p className="text-gray-700 dark:text-gray-200">
+                          {match.matchScore.aiMatchExplanation || "Analysis not available."}
+                        </p>
+                      </div>
+                    )}
+                    
+                    {/* Match scores display */}
+                    <div className="mb-4">
+                      {/* Combined score - if available */}
+                      {match.matchScore.combinedScore !== undefined && (
+                        <div className="flex items-center mb-3">
+                          <span className="text-sm font-medium text-gray-600 dark:text-gray-300 mr-2">Combined Match:</span>
+                          <div className="w-32 h-2 bg-gray-200 dark:bg-gray-700 rounded-full mr-1.5 overflow-hidden">
+                            <div 
+                              className="h-full bg-indigo-500 rounded-full" 
+                              style={{ width: `${match.matchScore.combinedScore}%` }}
+                            />
+                          </div>
+                          <span className={`text-xs font-medium ${
+                            match.matchScore.combinedScore >= 80 ? "text-green-600 dark:text-green-400" : 
+                            match.matchScore.combinedScore >= 60 ? "text-yellow-600 dark:text-yellow-400" : 
+                            "text-gray-600 dark:text-gray-400"
+                          }`}>
+                            {match.matchScore.combinedScore}%
+                          </span>
+                        </div>
+                      )}
+                    
+                      {/* AI Semantic match score - if available */}
+                      {match.matchScore.aiMatchScore !== undefined && (
+                        <div className="flex items-center mb-3">
+                          <span className="text-sm font-medium text-gray-600 dark:text-gray-300 mr-2">AI Semantic Match:</span>
+                          <div className="w-32 h-2 bg-gray-200 dark:bg-gray-700 rounded-full mr-1.5 overflow-hidden">
+                            <div 
+                              className="h-full bg-purple-500 rounded-full" 
+                              style={{ width: `${match.matchScore.aiMatchScore}%` }}
+                            />
+                          </div>
+                          <span className={`text-xs font-medium ${
+                            match.matchScore.aiMatchScore >= 80 ? "text-green-600 dark:text-green-400" : 
+                            match.matchScore.aiMatchScore >= 60 ? "text-yellow-600 dark:text-yellow-400" : 
+                            "text-gray-600 dark:text-gray-400"
+                          }`}>
+                            {match.matchScore.aiMatchScore}%
+                          </span>
+                        </div>
+                      )}
+                      
+                      {/* Traditional match score */}
+                      <div className="flex items-center mb-2">
+                        <span className="text-sm font-medium text-gray-600 dark:text-gray-300 mr-2">Traditional Match:</span>
+                        <div className="w-32 h-2 bg-gray-200 dark:bg-gray-700 rounded-full mr-1.5 overflow-hidden">
+                          <div 
+                            className="h-full bg-blue-500 rounded-full" 
+                            style={{ width: `${match.matchScore.total}%` }}
+                          />
+                        </div>
+                        <span className={`text-xs font-medium ${
+                          match.matchScore.total >= 80 ? "text-green-600 dark:text-green-400" : 
+                          match.matchScore.total >= 60 ? "text-yellow-600 dark:text-yellow-400" : 
+                          "text-gray-600 dark:text-gray-400"
+                        }`}>
+                          {match.matchScore.total}%
+                        </span>
+                      </div>
+                    </div>
+                    
+                    {/* Traditional match metrics */}
+                    <h4 className="text-sm font-medium text-gray-600 dark:text-gray-300 mb-2">Match Breakdown:</h4>
+                    <div className="grid grid-cols-2 gap-2 mb-3">
+                      <div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">Financial Need (40%)</div>
+                        <div className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                          <div className="h-full bg-green-500 rounded-full" style={{ width: `${match.matchScore.breakdown.financialNeed}%` }} />
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">Academic Merit (30%)</div>
+                        <div className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                          <div className="h-full bg-blue-500 rounded-full" style={{ width: `${match.matchScore.breakdown.academicMerit}%` }} />
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">Extracurriculars (20%)</div>
+                        <div className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                          <div className="h-full bg-purple-500 rounded-full" style={{ width: `${match.matchScore.breakdown.extracurriculars}%` }} />
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">Demographics (10%)</div>
+                        <div className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                          <div className="h-full bg-yellow-500 rounded-full" style={{ width: `${match.matchScore.breakdown.demographics}%` }} />
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      {match.matchScore.reasons.length > 0 ? (
+                        match.matchScore.reasons.map((reason, i) => (
+                          <div key={i} className="text-sm text-gray-700 dark:text-gray-300">
+                            {reason}
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-sm text-gray-700 dark:text-gray-300">
+                          This bursary appears to be a potential match based on your profile information.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                                  );
+                                }
+                                return null;
+            })()}
             
             {/* Apply button */}
             {canApply() && (

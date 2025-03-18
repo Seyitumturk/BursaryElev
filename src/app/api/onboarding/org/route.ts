@@ -43,6 +43,13 @@ export async function POST(request: Request) {
         category: body.category,
         about: body.about,
         mission: body.mission,
+        targetDemographics: body.targetDemographics || [],
+        fundingAmount: body.fundingAmount || "",
+        applicationDeadlines: body.applicationDeadlines || "",
+        scholarshipTypes: body.scholarshipTypes || [],
+        eligibilityCriteria: body.eligibilityCriteria || [],
+        fundingHistory: body.fundingHistory || "",
+        successStories: body.successStories || "",
         contact: {
           address: body.address,
           province: body.province,

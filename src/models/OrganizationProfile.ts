@@ -1,3 +1,5 @@
+
+
 import mongoose, { Schema, Document } from "mongoose";
 
 export interface IOrganizationProfile extends Document {
@@ -31,6 +33,13 @@ export interface IOrganizationProfile extends Document {
     zipCode?: string;
     country?: string;
   };
+  targetDemographics?: string[];
+  fundingAmount?: string;
+  applicationDeadlines?: string;
+  scholarshipTypes?: string[];
+  eligibilityCriteria?: string[];
+  fundingHistory?: string;
+  successStories?: string;
   status?: "pending" | "active";
 }
 
@@ -66,6 +75,13 @@ const OrganizationProfileSchema: Schema = new Schema(
       zipCode: { type: String },
       country: { type: String },
     },
+    targetDemographics: { type: [String], default: [] },
+    fundingAmount: { type: String, default: "" },
+    applicationDeadlines: { type: String, default: "" },
+    scholarshipTypes: { type: [String], default: [] },
+    eligibilityCriteria: { type: [String], default: [] },
+    fundingHistory: { type: String, default: "" },
+    successStories: { type: String, default: "" },
     status: { type: String, enum: ["pending", "active"], default: "active" },
   },
   { timestamps: true }

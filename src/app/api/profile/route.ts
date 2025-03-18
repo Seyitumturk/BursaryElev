@@ -23,6 +23,7 @@ export async function GET() {
 
     if (userDoc.role === "student") {
       profileData = await StudentProfile.findOne({ user: userDoc._id }).lean();
+      console.log("Retrieved student profile:", JSON.stringify(profileData, null, 2));
     } else {
       profileData = await OrganizationProfile.findOne({ user: userDoc._id }).lean();
     }
@@ -53,25 +54,38 @@ export async function PUT(request: Request) {
 
     // Get the raw body data
     const body = await request.json();
-    console.log("RAW UPDATE REQUEST:", JSON.stringify(body, null, 2));
+    console.log("PROFILE UPDATE RAW REQUEST:", JSON.stringify(body, null, 2));
     
     let updatedProfile;
 
     if (userDoc.role === "student") {
-      // Student profile update logic
+      // Student profile update logic - Create a complete object with all fields
       const updateData = {
-        institution: body.institution,
-        major: body.major,
-        graduationYear: body.graduationYear,
-        interests: body.interests,
-        bio: body.bio,
+        user: userDoc._id,
+        institution: body.institution || "",
+        major: body.major || "",
+        graduationYear: typeof body.graduationYear === 'number' ? body.graduationYear : 
+                     (typeof body.graduationYear === 'string' ? parseInt(body.graduationYear) : new Date().getFullYear() + 4),
+        interests: Array.isArray(body.interests) ? body.interests : [],
+        bio: body.bio || "",
+        skills: Array.isArray(body.skills) ? body.skills : [],
+        languages: Array.isArray(body.languages) ? body.languages : [],
+        achievements: Array.isArray(body.achievements) ? body.achievements : [],
+        financialBackground: body.financialBackground || "",
+        careerGoals: body.careerGoals || "",
+        locationPreferences: Array.isArray(body.locationPreferences) ? body.locationPreferences : [],
       };
       
-      updatedProfile = await StudentProfile.findOneAndUpdate(
-        { user: userDoc._id },
-        updateData,
-        { new: true, upsert: true }
-      );
+      console.log("STUDENT PROFILE UPDATE DATA:", JSON.stringify(updateData, null, 2));
+      
+      // Delete and recreate to ensure all fields are properly set
+      await StudentProfile.findOneAndDelete({ user: userDoc._id });
+      
+      // Create a new profile with all fields
+      updatedProfile = new StudentProfile(updateData);
+      await updatedProfile.save();
+      
+      console.log("UPDATED STUDENT PROFILE:", JSON.stringify(updatedProfile.toJSON(), null, 2));
     } else {
       // CRITICAL FIX: Use MongoDB $set operator to update individual fields properly
       // This prevents replacing entire objects and preserves fields not explicitly set
@@ -107,7 +121,7 @@ export async function PUT(request: Request) {
 
     return NextResponse.json({ 
       message: "Profile updated successfully", 
-      profile: updatedProfile,
+      profile: userDoc.role === "student" ? updatedProfile.toJSON() : updatedProfile,
       role: userDoc.role
     });
   } catch (error) {

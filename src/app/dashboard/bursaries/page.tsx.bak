@@ -1,0 +1,72 @@
+{/* Match score section - only show for student users */}
+            {userRole === "student" && matchesLoaded && (
+              <div className="mb-6 p-4 bg-gradient-to-tr from-orange-50 to-purple-50 dark:from-[#5b3d2e]/30 dark:to-purple-900/10 rounded-lg border border-orange-100 dark:border-orange-900/20">
+                {(() => {
+                  const match = matches.find(m => m.bursary._id === selectedBursary._id);
+                  if (match) {
+                    return (
+                      <div>
+                        <div className="flex justify-between items-center mb-3">
+                          <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
+                            <SparklesIcon className="h-5 w-5 mr-2 text-[#ff6600]" />
+                            AI Match Analysis
+                          </h3>
+                          <div className="flex items-center">
+                            <div className="w-24 h-3 bg-gray-200 dark:bg-gray-700 rounded-full mr-2 overflow-hidden">
+                              <div 
+                                className="h-full bg-gradient-to-r from-[#ff6600] to-[#ff0066] rounded-full" 
+                                style={{ width: `${match.matchScore.aiMatchScore}%` }}
+                              />
+                            </div>
+                            <span className={`text-lg font-bold ${
+                              match.matchScore.aiMatchScore >= 80 ? "text-green-600 dark:text-green-400" : 
+                              match.matchScore.aiMatchScore >= 60 ? "text-yellow-600 dark:text-yellow-400" : 
+                              "text-gray-700 dark:text-gray-300"
+                            }`}>
+                              {match.matchScore.aiMatchScore}%
+                            </span>
+                          </div>
+                        </div>
+                        
+                        {/* AI-generated match explanation */}
+                        <div className="bg-white/60 dark:bg-gray-800/30 rounded-lg p-4 border border-orange-100/50 dark:border-orange-800/20">
+                          <div className="flex items-start">
+                            <SparklesIcon className="h-5 w-5 text-[#ff6600] mt-1 mr-2 flex-shrink-0" />
+                            <p className="text-gray-700 dark:text-gray-300">
+                              {match.matchScore.aiMatchExplanation || "This bursary has been analyzed based on your profile data and found to be a potential match. The matching score represents the estimated compatibility with your academic background, interests, and financial needs."}
+                            </p>
+                          </div>
+                        </div>
+                        
+                        {/* Match breakdown */}
+                        <div className="mt-4 grid grid-cols-2 gap-3">
+                          <div className="bg-white/40 dark:bg-gray-800/20 rounded-lg p-3 border border-orange-100/50 dark:border-orange-800/20">
+                            <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Academic Match</h4>
+                            <div className="flex items-center">
+                              <div className="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full mr-2 overflow-hidden">
+                                <div className="h-full bg-blue-500 dark:bg-blue-400 rounded-full" style={{ width: `${match.matchScore.breakdown.academicMerit}%` }} />
+                              </div>
+                              <span className="text-xs font-medium text-gray-600 dark:text-gray-400 min-w-[28px] text-right">
+                                {match.matchScore.breakdown.academicMerit}%
+                              </span>
+                            </div>
+                          </div>
+                          <div className="bg-white/40 dark:bg-gray-800/20 rounded-lg p-3 border border-orange-100/50 dark:border-orange-800/20">
+                            <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Financial Match</h4>
+                            <div className="flex items-center">
+                              <div className="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full mr-2 overflow-hidden">
+                                <div className="h-full bg-green-500 dark:bg-green-400 rounded-full" style={{ width: `${match.matchScore.breakdown.financialNeed}%` }} />
+                              </div>
+                              <span className="text-xs font-medium text-gray-600 dark:text-gray-400 min-w-[28px] text-right">
+                                {match.matchScore.breakdown.financialNeed}%
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
+              </div>
+            )} 
