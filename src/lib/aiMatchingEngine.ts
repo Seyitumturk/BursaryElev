@@ -4,8 +4,14 @@ import { IStudentProfile } from '../models/StudentProfile';
 // Define the base URL for API calls
 const getApiUrl = () => {
   // For server-side code, we need an absolute URL
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
-  return `${baseUrl}/api/claude`;
+  if (process.env.NODE_ENV === 'production') {
+    // In production, use the deployment URL or NEXTAUTH_URL
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || process.env.NEXTAUTH_URL || 'https://' + process.env.VERCEL_URL;
+    return `${baseUrl}/api/claude`;
+  } else {
+    // In development, use localhost
+    return 'http://localhost:3000/api/claude';
+  }
 };
 
 // Ensure API key is set
