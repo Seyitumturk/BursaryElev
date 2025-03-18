@@ -186,7 +186,25 @@ export async function calculateAISemanticMatch(
       NEVER use generic language like "promising alignment" or "good compatibility" without specific details.
     `;
 
-    const response = await fetch(getApiUrl(), {
+    // Try to use a relative URL for server components where possible
+    let apiUrl;
+    if (typeof window === 'undefined') {
+      // Server-side - use relative URL when possible, but fall back to absolute URL if needed
+      apiUrl = '/api/claude';
+      
+      // Only in production, we might need an absolute URL for server-to-server communication
+      if (process.env.NODE_ENV === 'production') {
+        apiUrl = process.env.NEXT_PUBLIC_API_URL || process.env.NEXTAUTH_URL || 
+                (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '') + '/api/claude';
+      }
+    } else {
+      // Client-side - use the pre-configured API URL
+      apiUrl = getApiUrl();
+    }
+
+    console.log(`Making AI match request to: ${apiUrl}`);
+    
+    const response = await fetch(apiUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -195,7 +213,8 @@ export async function calculateAISemanticMatch(
     });
 
     if (!response.ok) {
-      throw new Error(`API request failed with status ${response.status}`);
+      const errorText = await response.text();
+      throw new Error(`API request failed with status ${response.status}: ${errorText}`);
     }
 
     const data = await response.json();

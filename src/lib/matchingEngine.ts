@@ -99,7 +99,11 @@ export async function calculateMatch(
   // If AI matching is requested, add AI-based scores
   if (includeAI) {
     try {
+      console.log(`Calculating AI match for bursary: ${bursary.title} (${bursary._id})`);
+      
       const aiMatch: AIMatchScore = await calculateAIMatch(student, bursary);
+      
+      console.log(`AI match calculated successfully: ${aiMatch.score}/100`);
       
       // Add AI scores to the match result
       matchScore.aiMatchScore = aiMatch.score;
@@ -115,7 +119,13 @@ export async function calculateMatch(
       // Calculate combined score (50% static, 50% AI)
       matchScore.combinedScore = Math.round((total + aiMatch.score) / 2);
     } catch (error) {
-      console.error("Error calculating AI match:", error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error(`Error calculating AI match for bursary ${bursary._id}:`, errorMessage);
+      
+      if (error instanceof Error && error.cause) {
+        console.error("Error cause:", error.cause);
+      }
+      
       // If AI matching fails, set default values
       matchScore.aiMatchScore = 0;
       matchScore.aiMatchExplanation = "AI matching not available at this time.";
@@ -483,11 +493,32 @@ export async function getRecommendedBursaries(
 ) {
   // Process all matches asynchronously
   const matchPromises = bursaries.map(async (bursary) => {
-    const matchScore = await calculateMatch(student, bursary, includeAI);
-    return {
-      bursary,
-      matchScore
-    };
+    try {
+      const matchScore = await calculateMatch(student, bursary, includeAI);
+      return {
+        bursary,
+        matchScore
+      };
+    } catch (error) {
+      console.error(`Error calculating match for bursary ${bursary._id}:`, error);
+      // Return a fallback match score if AI matching fails
+      const fallbackScore: MatchScore = {
+        total: 50, // Default medium score
+        breakdown: {
+          financialNeed: 50,
+          academicMerit: 50,
+          extracurriculars: 50,
+          demographics: 50
+        },
+        reasons: ["Match calculation encountered an error, using fallback score."],
+        conversationalExplanation: `This is a ${bursary.title} opportunity. Please review the details manually.`
+      };
+      
+      return {
+        bursary,
+        matchScore: fallbackScore
+      };
+    }
   });
   
   // Wait for all matches to be calculated
