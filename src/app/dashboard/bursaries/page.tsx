@@ -1099,7 +1099,9 @@ export default function BursariesPage() {
     try {
       setSummaryLoading(true);
       // Get the actual origin of the running application
-      const origin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
+      const origin = typeof window !== 'undefined' 
+        ? window.location.origin 
+        : process.env.NEXT_PUBLIC_API_URL || process.env.NEXTAUTH_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '/api');
       const response = await fetch(`${origin}/api/summary?type=bursary&id=${bursaryId}`);
       
       if (!response.ok) {
