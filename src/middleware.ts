@@ -10,7 +10,7 @@ declare module '@clerk/nextjs/server' {
   }
 }
 
-// Define route matchers
+// Define route matcherss
 const isAdminRoute = createRouteMatcher([
   "/admin(.*)",
   "/dashboard/admin(.*)",
