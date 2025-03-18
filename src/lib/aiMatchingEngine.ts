@@ -3,15 +3,11 @@ import { IStudentProfile } from '../models/StudentProfile';
 
 // Define the base URL for API calls
 const getApiUrl = () => {
-  // For server-side code, we need an absolute URL
-  if (process.env.NODE_ENV === 'production') {
-    // In production, use the deployment URL or NEXTAUTH_URL
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || process.env.NEXTAUTH_URL || 'https://' + process.env.VERCEL_URL;
-    return `${baseUrl}/api/claude`;
-  } else {
-    // In development, use localhost
-    return 'http://localhost:3000/api/claude';
-  }
+  // Only used for client-side code
+  const baseUrl = typeof window !== 'undefined' 
+    ? window.location.origin 
+    : 'https://bursary-elev.vercel.app';
+  return `${baseUrl}/api/claude`;
 };
 
 // Ensure API key is set
@@ -66,7 +62,25 @@ export async function generateStudentSummary(student: IStudentProfile): Promise<
       ${JSON.stringify(studentProfileData, null, 2)}
     `;
 
-    const response = await fetch(getApiUrl(), {
+    // Try to use a relative URL for server components where possible
+    let apiUrl;
+    if (typeof window === 'undefined') {
+      // Server-side - use relative URL when possible, but fall back to absolute URL if needed
+      apiUrl = '/api/claude';
+      
+      // Only in production, we might need an absolute URL for server-to-server communication
+      if (process.env.NODE_ENV === 'production') {
+        apiUrl = process.env.NEXT_PUBLIC_API_URL || process.env.NEXTAUTH_URL || 
+                (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '') + '/api/claude';
+      }
+    } else {
+      // Client-side - use the pre-configured API URL
+      apiUrl = getApiUrl();
+    }
+
+    console.log(`Making student summary request to: ${apiUrl}`);
+
+    const response = await fetch(apiUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -75,7 +89,8 @@ export async function generateStudentSummary(student: IStudentProfile): Promise<
     });
 
     if (!response.ok) {
-      throw new Error(`API request failed with status ${response.status}`);
+      const errorText = await response.text();
+      throw new Error(`API request failed with status ${response.status}: ${errorText}`);
     }
 
     const data = await response.json();
@@ -119,7 +134,25 @@ export async function generateBursarySummary(bursary: IBursary): Promise<string>
       ${JSON.stringify(bursaryData, null, 2)}
     `;
 
-    const response = await fetch(getApiUrl(), {
+    // Try to use a relative URL for server components where possible
+    let apiUrl;
+    if (typeof window === 'undefined') {
+      // Server-side - use relative URL when possible, but fall back to absolute URL if needed
+      apiUrl = '/api/claude';
+      
+      // Only in production, we might need an absolute URL for server-to-server communication
+      if (process.env.NODE_ENV === 'production') {
+        apiUrl = process.env.NEXT_PUBLIC_API_URL || process.env.NEXTAUTH_URL || 
+                (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '') + '/api/claude';
+      }
+    } else {
+      // Client-side - use the pre-configured API URL
+      apiUrl = getApiUrl();
+    }
+
+    console.log(`Making bursary summary request to: ${apiUrl}`);
+
+    const response = await fetch(apiUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -128,7 +161,8 @@ export async function generateBursarySummary(bursary: IBursary): Promise<string>
     });
 
     if (!response.ok) {
-      throw new Error(`API request failed with status ${response.status}`);
+      const errorText = await response.text();
+      throw new Error(`API request failed with status ${response.status}: ${errorText}`);
     }
 
     const data = await response.json();
