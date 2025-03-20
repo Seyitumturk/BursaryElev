@@ -121,15 +121,15 @@ export default function Sidebar({ links, position = 'left' }: SidebarProps) {
                 className={`flex items-center ${collapsed ? 'justify-center' : 'px-3'} py-3 bg-white/30 dark:bg-[var(--light-brown-2)]/20 backdrop-blur-md rounded-xl shadow-sm hover:bg-[var(--light-brown-1)]/20 dark:hover:bg-[var(--light-brown-1)]/30 hover:shadow-md transition-all group`}
               >
                 {link.icon && (
-                  <span className="text-[var(--light-brown-2)] dark:text-[var(--light-brown-1)] group-hover:text-[#c33c33]/70 dark:group-hover:text-[#c33c33]/80">
+                  <span className="text-[var(--text-secondary)] dark:text-[var(--light-brown-1)] group-hover:text-[#c33c33]/70 dark:group-hover:text-[#c33c33]/80">
                     {link.icon}
                   </span>
                 )}
                 {!collapsed && (
-                  <span className="ml-3 text-gray-800 dark:text-white font-medium truncate">{link.label}</span>
+                  <span className="ml-3 text-[var(--text-primary)] dark:text-white font-medium truncate">{link.label}</span>
                 )}
                 {collapsed && !link.icon && (
-                  <span className="text-[var(--light-brown-2)] dark:text-[var(--light-brown-1)] font-bold">
+                  <span className="text-[var(--text-secondary)] dark:text-[var(--light-brown-1)] font-bold">
                     {link.label.charAt(0)}
                   </span>
                 )}
@@ -138,7 +138,7 @@ export default function Sidebar({ links, position = 'left' }: SidebarProps) {
           ))}
         </ul>
       </nav>
-      <div className="mt-4 text-center text-xs text-gray-500 dark:text-[var(--light-brown-1)]/70">
+      <div className="mt-4 text-center text-xs text-[var(--text-secondary)] dark:text-[var(--light-brown-1)]/70">
         {!collapsed && <p>Bursary Platform &copy; {new Date().getFullYear()}</p>}
       </div>
     </aside>

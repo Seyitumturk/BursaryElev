@@ -181,7 +181,7 @@ export default function BursaryDetailPage({ params }: { params: Promise<{ id: st
           className="rounded-full object-cover"
         />
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+          <h1 className="text-3xl font-bold text-title-text-color dark:text-white">
             {bursary.title}
           </h1>
           <p className="text-xl text-gray-600 dark:text-gray-300">
@@ -195,7 +195,7 @@ export default function BursaryDetailPage({ params }: { params: Promise<{ id: st
         {/* Left column - Main details */}
         <div className="md:col-span-2 space-y-6">
           <div className="bg-white/70 dark:bg-gray-800/50 rounded-xl p-6 shadow-md backdrop-blur-sm border border-gray-200 dark:border-gray-700">
-            <h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-white">
+            <h2 className="text-xl font-semibold mb-4 text-title-text-color dark:text-white">
               Description
             </h2>
             <p className="text-gray-700 dark:text-gray-300 whitespace-pre-line">
@@ -204,7 +204,7 @@ export default function BursaryDetailPage({ params }: { params: Promise<{ id: st
           </div>
           
           <div className="bg-white/70 dark:bg-gray-800/50 rounded-xl p-6 shadow-md backdrop-blur-sm border border-gray-200 dark:border-gray-700">
-            <h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-white">
+            <h2 className="text-xl font-semibold mb-4 text-title-text-color dark:text-white">
               Eligibility Criteria
             </h2>
             <p className="text-gray-700 dark:text-gray-300 whitespace-pre-line">
@@ -214,7 +214,7 @@ export default function BursaryDetailPage({ params }: { params: Promise<{ id: st
           
           {bursary.documents && bursary.documents.length > 0 && (
             <div className="bg-white/70 dark:bg-gray-800/50 rounded-xl p-6 shadow-md backdrop-blur-sm border border-gray-200 dark:border-gray-700">
-              <h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-white">
+              <h2 className="text-xl font-semibold mb-4 text-title-text-color dark:text-white">
                 Supporting Documents
               </h2>
               <ul className="space-y-2">
@@ -240,7 +240,7 @@ export default function BursaryDetailPage({ params }: { params: Promise<{ id: st
         <div className="space-y-6">
           {/* Key details card */}
           <div className="bg-white/70 dark:bg-gray-800/50 rounded-xl p-6 shadow-md backdrop-blur-sm border border-gray-200 dark:border-gray-700">
-            <h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-white">
+            <h2 className="text-xl font-semibold mb-4 text-title-text-color dark:text-white">
               Key Details
             </h2>
             <div className="space-y-4">
@@ -326,7 +326,7 @@ export default function BursaryDetailPage({ params }: { params: Promise<{ id: st
           {/* AI insights card */}
           {(bursary.aiTags?.length > 0 || bursary.aiCategorization?.length > 0) && (
             <div className="bg-white/70 dark:bg-gray-800/50 rounded-xl p-6 shadow-md backdrop-blur-sm border border-gray-200 dark:border-gray-700">
-              <h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-white">
+              <h2 className="text-xl font-semibold mb-4 text-title-text-color dark:text-white">
                 AI Insights
               </h2>
               
@@ -377,7 +377,7 @@ export default function BursaryDetailPage({ params }: { params: Promise<{ id: st
           
           {/* Organization contact info */}
           <div className="bg-white/70 dark:bg-gray-800/50 rounded-xl p-6 shadow-md backdrop-blur-sm border border-gray-200 dark:border-gray-700">
-            <h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-white">
+            <h2 className="text-xl font-semibold mb-4 text-title-text-color dark:text-white">
               Contact Information
             </h2>
             <div className="space-y-2">

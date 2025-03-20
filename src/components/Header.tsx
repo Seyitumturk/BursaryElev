@@ -440,10 +440,10 @@ export default function Header() {
     <>
       <header className="bg-[var(--sidebar-bg)]/80 dark:bg-[var(--sidebar-bg)] shadow-md backdrop-blur-md px-5 py-3 flex items-center justify-between rounded-xl mx-4 mt-4">
         <div className="flex items-center">
-          <h1 className="text-xl font-bold text-gray-800 dark:text-white font-sans flex items-center gap-2">
+          <h1 className="text-xl font-bold text-[var(--text-title)] dark:text-white font-sans flex items-center gap-2">
             {user ? (user.firstName || user.fullName) : "Welcome"}
             {(clerkRole || mongoDbRole || localRole) && (
-              <span className="text-xs font-medium px-2 py-1 bg-white/30 dark:bg-[#c83c34]/80 rounded-full text-gray-600 dark:text-white">
+              <span className="text-xs font-medium px-2 py-1 bg-white/30 dark:bg-[#c83c34]/80 rounded-full text-[var(--text-secondary)] dark:text-white">
                 {clerkRole || mongoDbRole || localRole}
               </span>
             )}

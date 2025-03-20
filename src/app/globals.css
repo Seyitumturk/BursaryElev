@@ -1,54 +1,361 @@
+/* Tailwind CSS directives - processed by the Tailwind compiler */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  /* Primary brand colors */
-  --primary: #2563eb;
-  --primary-dark: #1d4ed8;
-  --secondary: #4f46e5;
+  --primary-red: #ae3d31;
+  --primary-orange: #d36425;
+  --primary-brown: #bb725c;
+  --neutral-cream: #d1a989;
+  --neutral-tan: #a9866b;
+  --neutral-light-tan: #e3cbb7;
+  --neutral-brown: #876650;
+  --neutral-dark-brown: #5b3d2e;
+  --accent-cream: #f5ede7;
   
-  /* Neutral colors */
+  /* Background variables */
+  --sidebar-bg: rgba(255, 255, 255, 0.8);
   --background: #f4ece4;
-  --foreground: #171717;
-  --gray-50: #f9fafb;
-  --gray-100: #f3f4f6;
-  --gray-200: #e5e7eb;
+  --light-brown-1: #d1a989;
+  --light-brown-2: #a9866b;
   
-  /* Light mode colors */
-  --sidebar-bg: #e8dccc;
-  --light-brown-1: #d2ac8b;
-  --light-brown-2: #c29b7d;
+  /* Text colors */
+  --text-title: #5b3d2e;  /* Using brand dark brown for titles in light mode */
+  --text-primary: #5b3d2e;
+  --text-secondary: #876650;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #5b3d2e;
-    --foreground: #ffffff;
-    --gray-50: #18181b;
-    --gray-100: #27272a;
-    --gray-200: #3f3f46;
-    
-    /* Dark mode colors */
-    --sidebar-bg: #3d2a20; /* Darker shade of the main background */
-    --header-bg: #c33c33; /* Red color for header */
-    --light-brown-1: #d2ac8b;
-    --light-brown-2: #c29b7d;
-  }
-}
-
-body {
-  color: var(--foreground);
-  background-color: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
-}
-
-@layer components {
-  .btn-primary {
-    @apply bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors;
-  }
+/* Dark mode variables */
+:root.dark {
+  --sidebar-bg: #5b3d2e;  /* Using the brand dark brown for dark mode */
+  --background: #3d2a20;
+  --light-brown-1: #876650;
+  --light-brown-2: #5b3d2e;
   
-  .btn-secondary {
-    @apply bg-gray-100 text-gray-900 px-6 py-3 rounded-lg hover:bg-gray-200 transition-colors dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700;
+  /* Text colors for dark mode */
+  --text-title: #ffffff;
+  --text-primary: #e3cbb7;
+  --text-secondary: #d1a989;
+}
+
+/* Gradient animation */
+@keyframes gradient-shift {
+  0% {
+    background-position: 0% 50%;
   }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.animated-gradient {
+  background-size: 200% 200%;
+  animation: gradient-shift 15s ease infinite;
+}
+
+/* Card hover effect */
+.hover-lift {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 25px -5px rgba(91, 61, 46, 0.1),
+    0 10px 10px -5px rgba(91, 61, 46, 0.04);
+}
+
+/* Custom button styles */
+.btn-primary {
+  display: inline-block;
+  padding: 0.75rem 1.5rem;
+  font-weight: 600;
+  color: #f5ede7;
+  background: linear-gradient(to right, #ae3d31, #d36425, #bb725c);
+  background-size: 200% auto;
+  border-radius: 0.5rem;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 6px -1px rgba(91, 61, 46, 0.1),
+    0 2px 4px -1px rgba(91, 61, 46, 0.06);
+}
+
+.btn-primary:hover {
+  background-position: right center;
+  box-shadow: 0 10px 15px -3px rgba(91, 61, 46, 0.1),
+    0 4px 6px -2px rgba(91, 61, 46, 0.05);
+}
+
+.btn-secondary {
+  display: inline-block;
+  padding: 0.75rem 1.5rem;
+  font-weight: 600;
+  color: #d36425;
+  background-color: transparent;
+  border: 2px solid #d36425;
+  border-radius: 0.5rem;
+  transition: all 0.3s ease;
+}
+
+.btn-secondary:hover {
+  background-color: #d36425;
+  color: #f5ede7;
+}
+
+.btn-tertiary {
+  display: inline-block;
+  padding: 0.75rem 1.5rem;
+  font-weight: 600;
+  color: #5b3d2e;
+  background-color: #f5ede7;
+  border: 1px solid #a9866b;
+  border-radius: 0.5rem;
+  transition: all 0.3s ease;
+  box-shadow: 0 1px 3px 0 rgba(91, 61, 46, 0.1),
+    0 1px 2px 0 rgba(91, 61, 46, 0.06);
+}
+
+.btn-tertiary:hover {
+  background-color: #e3cbb7;
+  box-shadow: 0 4px 6px -1px rgba(91, 61, 46, 0.1),
+    0 2px 4px -1px rgba(91, 61, 46, 0.06);
+}
+
+/* Gentle swinging animation for orbs */
+@keyframes gentle-swing {
+  0% {
+    transform: translateX(0) translateY(0);
+  }
+  25% {
+    transform: translateX(30px) translateY(-15px);
+  }
+  50% {
+    transform: translateX(0) translateY(-30px);
+  }
+  75% {
+    transform: translateX(-30px) translateY(-15px);
+  }
+  100% {
+    transform: translateX(0) translateY(0);
+  }
+}
+
+@keyframes gentle-swing-alt {
+  0% {
+    transform: translateX(0) translateY(0);
+  }
+  25% {
+    transform: translateX(-25px) translateY(10px);
+  }
+  50% {
+    transform: translateX(0) translateY(25px);
+  }
+  75% {
+    transform: translateX(25px) translateY(10px);
+  }
+  100% {
+    transform: translateX(0) translateY(0);
+  }
+}
+
+@keyframes subtle-pulse {
+  0% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 0.85;
+  }
+  100% {
+    opacity: 0.7;
+  }
+}
+
+.floating-orb {
+  border-radius: 50%;
+  position: absolute;
+  z-index: 0;
+  /* Glass morphism effect */
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.05));
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  filter: blur(6px);
+}
+
+.floating-orb-1 {
+  width: 150px;
+  height: 150px;
+  top: 20%;
+  left: 15%;
+  background-color: rgba(235, 85, 65, 0.6);
+  animation: gentle-swing 25s ease-in-out infinite, subtle-pulse 12s ease-in-out infinite;
+}
+
+.floating-orb-2 {
+  width: 100px;
+  height: 100px;
+  top: 30%;
+  right: 20%;
+  background-color: rgba(255, 150, 50, 0.6);
+  animation: gentle-swing-alt 28s ease-in-out infinite, subtle-pulse 14s ease-in-out infinite;
+}
+
+.floating-orb-3 {
+  width: 180px;
+  height: 180px;
+  bottom: 25%;
+  left: 25%;
+  background-color: rgba(240, 140, 110, 0.6);
+  animation: gentle-swing 30s ease-in-out infinite, subtle-pulse 15s ease-in-out infinite;
+}
+
+.floating-orb-4 {
+  width: 120px;
+  height: 120px;
+  bottom: 15%;
+  right: 15%;
+  background-color: rgba(250, 110, 75, 0.6);
+  animation: gentle-swing-alt 26s ease-in-out infinite, subtle-pulse 13s ease-in-out infinite;
+}
+
+.floating-orb-5 {
+  width: 160px;
+  height: 160px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: rgba(255, 175, 60, 0.6);
+  animation: gentle-swing 32s ease-in-out infinite, subtle-pulse 16s ease-in-out infinite;
+}
+
+/* Seamless section transitions */
+.wave-divider {
+  position: relative;
+  width: 100%;
+  height: 60px; 
+  line-height: 0;
+  z-index: 20;
+  overflow: hidden;
+}
+
+.wave-divider svg {
+  position: relative;
+  display: block;
+  width: calc(100% + 1.3px);
+  height: 60px; 
+  transform: rotateY(180deg);
+}
+
+/* Wave gradient fill */
+.fill-gradient {
+  fill: url('#wave-gradient');
+  transition: all 0.5s ease;
+}
+
+/* Add the gradient definition to the SVG */
+@keyframes waveFillAnimation {
+  0% {
+    stop-color: #d1a989;
+  }
+  50% {
+    stop-color: #bb8e6d;
+  }
+  100% {
+    stop-color: #d1a989;
+  }
+}
+
+/* Additional styling for mission cards */
+.mission-card {
+  transition: all 0.3s ease;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+}
+
+.mission-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 30px rgba(91, 61, 46, 0.1);
+}
+
+/* Clerk Auth Form Overrides */
+.cl-card,
+.cl-socialButtonsBlockButton,
+.cl-socialButtonsBlockButtonArrow,
+.cl-socialButtonsBlockButtonText,
+.cl-socialButtonsBlockButtonIconBox,
+.cl-formButtonPrimary,
+.cl-footerActionLink,
+.cl-footerAction,
+.cl-formFieldInput,
+.cl-formFieldLabel,
+.cl-internal-1cet4qo,
+.cl-internal-b3fm6y,
+.cl-internal-wray3d {
+  margin-left: 0 !important;
+}
+
+/* Apply consistent centering to Clerk forms */
+.cl-card {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  width: 100% !important;
+  max-width: 400px !important;
+  margin: 0 auto !important;
+  box-sizing: border-box !important;
+}
+
+/* Fix container width and alignment */
+.cl-rootBox {
+  width: 100% !important;
+  max-width: 400px !important;
+  margin: 0 auto !important;
+  padding: 0 !important;
+}
+
+/* Ensure all form elements are properly centered */
+.cl-main {
+  padding: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  width: 100% !important;
+}
+
+/* Fix the input fields width */
+.cl-formFieldInput {
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* Center form elements */
+.cl-internal-wray3d {
+  text-align: center !important;
+  width: 100% !important;
+}
+
+/* Fix social login buttons alignment */
+.cl-socialButtonsBlock {
+  margin: 0 auto !important;
+  width: 100% !important;
+  display: flex !important;
+  justify-content: center !important;
+}
+
+/* Adding utility classes for title text */
+.title-text {
+  color: var(--text-title);
+}
+
+.primary-text {
+  color: var(--text-primary);
+}
+
+.secondary-text {
+  color: var(--text-secondary);
 }
