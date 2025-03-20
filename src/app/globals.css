@@ -352,6 +352,10 @@
   color: var(--text-title);
 }
 
+.text-title-text-color {
+  color: var(--text-title);
+}
+
 .primary-text {
   color: var(--text-primary);
 }
