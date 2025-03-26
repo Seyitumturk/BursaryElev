@@ -7,7 +7,7 @@ import {
   BriefcaseIcon, TagIcon, DocumentTextIcon, StarIcon,
   BuildingOffice2Icon, BookOpenIcon, AcademicCapIcon, SparklesIcon, 
   ChatBubbleLeftEllipsisIcon, GlobeAltIcon, PhoneIcon, EnvelopeIcon,
-  MapPinIcon, PencilSquareIcon, CheckIcon, XMarkIcon, CurrencyDollarIcon
+  MapPinIcon, PencilSquareIcon, CheckIcon, XMarkIcon, CurrencyDollarIcon, UserIcon
 } from "@heroicons/react/24/outline";
 import { toast } from 'react-hot-toast';
 import ProfileSummary from "@/components/ProfileSummary";
@@ -148,6 +148,9 @@ interface Profile {
   fundingHistory?: string;
   successStories?: string;
   status?: "pending" | "active";
+  firstName?: string;
+  lastName?: string;
+  position?: string;
 }
 
 export default function ProfilePage() {
@@ -553,7 +556,7 @@ export default function ProfilePage() {
                     <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{fullName}</h1>
                     <p className="text-gray-500 dark:text-gray-400 mt-1">{email}</p>
                     <div className="mt-2 inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                      {effectiveRole === "student" ? "Student" : "Funder/Organization"}
+                      {effectiveRole === "student" ? "Student" : effectiveRole === "admin" ? "Admin" : "Funder/Organization"}
                     </div>
                   </div>
                   <div className="mt-4 sm:mt-0 flex space-x-2">
@@ -680,7 +683,11 @@ export default function ProfilePage() {
                 <div className="text-center py-12">
                   <p className="text-gray-500 dark:text-gray-400 mb-4">No profile information available</p>
                   <Link 
-                    href={effectiveRole === "student" ? "/onboarding/student" : "/onboarding/org"} 
+                    href={
+                      effectiveRole === "student" ? "/onboarding/student" : 
+                      effectiveRole === "admin" ? "/onboarding/admin" : 
+                      "/onboarding/org"
+                    } 
                     className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 dark:bg-[#5b3d2e] dark:hover:bg-[#4a3226]"
                   >
                     Complete Your Profile
@@ -801,6 +808,53 @@ export default function ProfilePage() {
                                     value={editableProfile.locationPreferences?.join(', ')} 
                                     fieldName="locationPreferences"
                                     isArray={true}
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          </>
+                        ) : effectiveRole === "admin" ? (
+                          <>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                              <div className="bg-purple-50 dark:bg-[#5b3d2e]/50 rounded-lg p-6 shadow-sm border border-purple-100 dark:border-[#d2ac8b]/30">
+                                <div className="flex items-center mb-4">
+                                  <UserIcon className="h-6 w-6 text-purple-600 dark:text-[var(--light-brown-1)]" />
+                                  <h3 className="ml-2 text-lg font-medium text-gray-900 dark:text-white">Admin Information</h3>
+                                </div>
+                                <div className="space-y-4">
+                                  <EditableField 
+                                    label="First Name" 
+                                    value={editableProfile.firstName} 
+                                    fieldName="firstName"
+                                  />
+                                  <EditableField 
+                                    label="Last Name" 
+                                    value={editableProfile.lastName} 
+                                    fieldName="lastName"
+                                  />
+                                  <EditableField 
+                                    label="Position" 
+                                    value={editableProfile.position} 
+                                    fieldName="position"
+                                  />
+                                </div>
+                              </div>
+                              <div className="bg-blue-50 dark:bg-[#5b3d2e]/50 rounded-lg p-6 shadow-sm border border-blue-100 dark:border-[#d2ac8b]/30">
+                                <div className="flex items-center mb-4">
+                                  <ChatBubbleLeftEllipsisIcon className="h-6 w-6 text-blue-600 dark:text-[var(--light-brown-1)]" />
+                                  <h3 className="ml-2 text-lg font-medium text-gray-900 dark:text-white">Bio & Contact</h3>
+                                </div>
+                                <div className="space-y-4">
+                                  <EditableField 
+                                    label="Contact Information" 
+                                    value={editableProfile.contact} 
+                                    fieldName="contact"
+                                  />
+                                  <EditableField 
+                                    label="Bio" 
+                                    value={editableProfile.bio} 
+                                    fieldName="bio"
+                                    isTextarea={true}
                                   />
                                 </div>
                               </div>

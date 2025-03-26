@@ -1,7 +1,7 @@
 "use client";
 import React from "react";
 import Link from "next/link";
-import { AcademicCapIcon, BuildingOffice2Icon } from "@heroicons/react/24/outline";
+import { AcademicCapIcon, BuildingOffice2Icon, ShieldCheckIcon } from "@heroicons/react/24/outline";
 
 export default function OnboardingSelect() {
   return (
@@ -21,6 +21,13 @@ export default function OnboardingSelect() {
         >
           <BuildingOffice2Icon className="h-16 w-16 text-green-600 mb-4" />
           <h2 className="text-xl font-semibold text-black">I&apos;m a Funder</h2>
+        </Link>
+        <Link
+          href="/onboarding/admin"
+          className="bg-white shadow-lg rounded-xl p-6 flex flex-col items-center hover:shadow-2xl transition"
+        >
+          <ShieldCheckIcon className="h-16 w-16 text-purple-600 mb-4" />
+          <h2 className="text-xl font-semibold text-black">I&apos;m an Admin</h2>
         </Link>
       </div>
     </div>

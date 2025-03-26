@@ -27,16 +27,26 @@ const isPublicRoute = createRouteMatcher([
   "/sign-up(.*)",
   "/api/webhook(.*)",
   "/organizations(.*)",
+  "/api/admin(.*)",
+  "/api/sync-role(.*)",
+  "/api/debug-auth(.*)",
   "/"
   // Add other public routes if necessary
 ]);
 
 export default clerkMiddleware((auth, req) => {
   // For debugging - log the current path
-  console.log(`Request path: ${req.url}`);
+  console.log(`[Middleware] Request path: ${req.url}`);
+  console.log(`[Middleware] Auth details:`, {
+    userId: auth.userId,
+    sessionId: auth.sessionId,
+    hasRole: !!auth.sessionClaims?.metadata?.role,
+    role: auth.sessionClaims?.metadata?.role || 'none'
+  });
   
   // Allow public routes to skip further middleware checks
   if (isPublicRoute(req)) {
+    console.log(`[Middleware] Public route detected, skipping auth checks`);
     return NextResponse.next();
   }
 

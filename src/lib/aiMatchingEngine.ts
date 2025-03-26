@@ -1,12 +1,20 @@
 import { IBursary } from '../models/Bursary';
 import { IStudentProfile } from '../models/StudentProfile';
 
-// Define the base URL for API calls
+/**
+ * Get the correct API URL for Claude API calls
+ * This properly handles development and production environments
+ */
 const getApiUrl = () => {
-  // Only used for client-side code
-  const baseUrl = typeof window !== 'undefined' 
-    ? window.location.origin 
-    : 'https://bursary-elev.vercel.app';
+  // For client-side code (browser)
+  if (typeof window !== 'undefined') {
+    return `${window.location.origin}/api/claude`;
+  }
+  
+  // For server-side code (Node.js)
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL || 
+                 process.env.NEXTAUTH_URL || 
+                 (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
   return `${baseUrl}/api/claude`;
 };
 
@@ -62,30 +70,15 @@ export async function generateStudentSummary(student: IStudentProfile): Promise<
       ${JSON.stringify(studentProfileData, null, 2)}
     `;
 
-    // Try to use a relative URL for server components where possible
-    let apiUrl;
-    if (typeof window === 'undefined') {
-      // Server-side - use relative URL when possible, but fall back to absolute URL if needed
-      apiUrl = '/api/claude';
-      
-      // Only in production, we might need an absolute URL for server-to-server communication
-      if (process.env.NODE_ENV === 'production') {
-        apiUrl = process.env.NEXT_PUBLIC_API_URL || process.env.NEXTAUTH_URL || 
-                (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '') + '/api/claude';
-      }
-    } else {
-      // Client-side - use the pre-configured API URL
-      apiUrl = getApiUrl();
-    }
-
+    const apiUrl = getApiUrl();
     console.log(`Making student summary request to: ${apiUrl}`);
 
     const response = await fetch(apiUrl, {
-      method: "POST",
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ prompt }),
+      body: JSON.stringify({ prompt })
     });
 
     if (!response.ok) {
@@ -134,30 +127,15 @@ export async function generateBursarySummary(bursary: IBursary): Promise<string>
       ${JSON.stringify(bursaryData, null, 2)}
     `;
 
-    // Try to use a relative URL for server components where possible
-    let apiUrl;
-    if (typeof window === 'undefined') {
-      // Server-side - use relative URL when possible, but fall back to absolute URL if needed
-      apiUrl = '/api/claude';
-      
-      // Only in production, we might need an absolute URL for server-to-server communication
-      if (process.env.NODE_ENV === 'production') {
-        apiUrl = process.env.NEXT_PUBLIC_API_URL || process.env.NEXTAUTH_URL || 
-                (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '') + '/api/claude';
-      }
-    } else {
-      // Client-side - use the pre-configured API URL
-      apiUrl = getApiUrl();
-    }
-
+    const apiUrl = getApiUrl();
     console.log(`Making bursary summary request to: ${apiUrl}`);
 
     const response = await fetch(apiUrl, {
-      method: "POST",
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ prompt }),
+      body: JSON.stringify({ prompt })
     });
 
     if (!response.ok) {
@@ -220,30 +198,15 @@ export async function calculateAISemanticMatch(
       NEVER use generic language like "promising alignment" or "good compatibility" without specific details.
     `;
 
-    // Try to use a relative URL for server components where possible
-    let apiUrl;
-    if (typeof window === 'undefined') {
-      // Server-side - use relative URL when possible, but fall back to absolute URL if needed
-      apiUrl = '/api/claude';
-      
-      // Only in production, we might need an absolute URL for server-to-server communication
-      if (process.env.NODE_ENV === 'production') {
-        apiUrl = process.env.NEXT_PUBLIC_API_URL || process.env.NEXTAUTH_URL || 
-                (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '') + '/api/claude';
-      }
-    } else {
-      // Client-side - use the pre-configured API URL
-      apiUrl = getApiUrl();
-    }
-
+    const apiUrl = getApiUrl();
     console.log(`Making AI match request to: ${apiUrl}`);
     
     const response = await fetch(apiUrl, {
-      method: "POST",
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ prompt }),
+      body: JSON.stringify({ prompt })
     });
 
     if (!response.ok) {
@@ -252,33 +215,40 @@ export async function calculateAISemanticMatch(
     }
 
     const data = await response.json();
+    
     try {
-      // Parse the JSON from Claude's response
-      const matchResult = JSON.parse(data.response);
-      return {
-        score: matchResult.score,
-        explanation: matchResult.explanation,
+      // Parse the JSON response from Claude
+      const result = JSON.parse(data.response);
+      const score = parseInt(result.score, 10);
+      const explanation = result.explanation;
+      
+      console.log(`AI match calculated successfully: ${score}/100`);
+      
+      return { 
+        score: isNaN(score) ? 50 : score, 
+        explanation: explanation || "No explanation provided" 
       };
     } catch (parseError) {
-      console.error("Error parsing Claude response:", parseError);
-      // Fallback if parsing fails
-      return {
-        score: 50,
-        explanation: "Match calculation based on specific profile and bursary compatibility factors.",
+      console.error("Error parsing AI match response:", parseError);
+      console.log("Raw response:", data.response);
+      
+      // Try to extract just the score and explanation if the response is not valid JSON
+      const scoreMatch = data.response.match(/score["\s:]+(\d+)/i);
+      const score = scoreMatch ? parseInt(scoreMatch[1], 10) : 50;
+      
+      return { 
+        score, 
+        explanation: "Unable to parse the full explanation. Extracted score based on available data." 
       };
     }
   } catch (error) {
     console.error("Error calculating AI semantic match:", error);
-    // Fallback if Claude API fails
-    return {
-      score: 50,
-      explanation: "Match analysis unavailable. Please review bursary criteria manually.",
-    };
+    return { score: 50, explanation: "Error calculating match score." };
   }
 }
 
 /**
- * Complete function to match a student with a bursary using Claude 3.7
+ * Calculate an AI-enhanced match score between a student and bursary
  * @param student The student profile
  * @param bursary The bursary opportunity
  * @returns AI-based match score with explanations and summaries

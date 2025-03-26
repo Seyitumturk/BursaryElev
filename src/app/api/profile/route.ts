@@ -24,8 +24,21 @@ export async function GET() {
     if (userDoc.role === "student") {
       profileData = await StudentProfile.findOne({ user: userDoc._id }).lean();
       console.log("Retrieved student profile:", JSON.stringify(profileData, null, 2));
-    } else {
+    } else if (userDoc.role === "organization" || userDoc.role === "funder") {
       profileData = await OrganizationProfile.findOne({ user: userDoc._id }).lean();
+    } else if (userDoc.role === "admin") {
+      // For admin users, return admin information from User model
+      profileData = {
+        _id: userDoc._id,
+        user: userDoc._id,
+        email: userDoc.email,
+        firstName: userDoc.firstName || "",
+        lastName: userDoc.lastName || "",
+        position: userDoc.adminInfo?.position || "",
+        contact: userDoc.adminInfo?.contact || "",
+        bio: userDoc.adminInfo?.bio || "",
+      };
+      console.log("Retrieved admin profile:", JSON.stringify(profileData, null, 2));
     }
 
     return NextResponse.json({ 
@@ -86,7 +99,7 @@ export async function PUT(request: Request) {
       await updatedProfile.save();
       
       console.log("UPDATED STUDENT PROFILE:", JSON.stringify(updatedProfile.toJSON(), null, 2));
-    } else {
+    } else if (userDoc.role === "organization" || userDoc.role === "funder") {
       // CRITICAL FIX: Use MongoDB $set operator to update individual fields properly
       // This prevents replacing entire objects and preserves fields not explicitly set
       
@@ -117,6 +130,36 @@ export async function PUT(request: Request) {
       );
       
       console.log("UPDATED PROFILE RESULT:", JSON.stringify(updatedProfile, null, 2));
+    } else if (userDoc.role === "admin") {
+      // For admin users, update the User document directly
+      const { firstName, lastName, position, contact, bio } = body;
+      
+      // Update basic fields in the User document
+      userDoc.firstName = firstName || userDoc.firstName;
+      userDoc.lastName = lastName || userDoc.lastName;
+      
+      // Update adminInfo object with additional fields
+      userDoc.adminInfo = {
+        position: position || userDoc.adminInfo?.position || "",
+        contact: contact || userDoc.adminInfo?.contact || "",
+        bio: bio || userDoc.adminInfo?.bio || ""
+      };
+      
+      await userDoc.save();
+      
+      // Return user data as profile
+      updatedProfile = {
+        _id: userDoc._id,
+        user: userDoc._id,
+        email: userDoc.email,
+        firstName: userDoc.firstName || "",
+        lastName: userDoc.lastName || "",
+        position: userDoc.adminInfo?.position || "",
+        contact: userDoc.adminInfo?.contact || "",
+        bio: bio || "", 
+      };
+      
+      console.log("UPDATED ADMIN PROFILE:", JSON.stringify(updatedProfile, null, 2));
     }
 
     return NextResponse.json({ 

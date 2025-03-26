@@ -6,9 +6,21 @@ export interface IUser extends Document {
   role: "student" | "organization" | "funder" | "admin";
   firstName?: string;
   lastName?: string;
+  adminInfo?: {
+    position?: string;
+    contact?: string;
+    bio?: string;
+  };
   createdAt: Date;
   updatedAt: Date;
 }
+
+// Admin info schema for users with admin role
+const AdminInfoSchema = new Schema({
+  position: { type: String },
+  contact: { type: String },
+  bio: { type: String }
+}, { _id: false });
 
 const UserSchema: Schema = new Schema(
   {
@@ -22,6 +34,7 @@ const UserSchema: Schema = new Schema(
     },
     firstName: { type: String },
     lastName: { type: String },
+    adminInfo: AdminInfoSchema, // Add the adminInfo field for admin users
   },
   { timestamps: true }
 );

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
 import Sidebar from "../../components/Sidebar";
 import Header from "../../components/Header";
+import { ChartBarIcon } from "@heroicons/react/24/outline";
 
 export default function DashboardLayout({
   children,
@@ -15,14 +16,42 @@ export default function DashboardLayout({
   const router = useRouter();
   const [userRole, setUserRole] = useState<string | null>(null);
   
+  // Synchronize user role with Clerk metadata
+  const syncRoleWithClerk = async () => {
+    try {
+      console.log("Synchronizing user role with Clerk metadata");
+      const response = await fetch('/api/admin/sync-role', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log("Role sync successful:", data);
+      } else {
+        console.error("Failed to sync role:", await response.text());
+      }
+    } catch (error) {
+      console.error("Error syncing role:", error);
+    }
+  };
+  
   // Get user role when component mounts
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (typeof window !== 'undefined' && isLoaded && userId) {
       const storedRole = localStorage.getItem('userRole');
       setUserRole(storedRole);
       console.log("User role:", storedRole); // Debug user role
+      
+      // Synchronize with Clerk metadata if admin
+      if (storedRole === "admin") {
+        syncRoleWithClerk();
+      }
     }
-  }, []);
+  }, [isLoaded, userId]);
   
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -41,6 +70,17 @@ export default function DashboardLayout({
   if (userRole === "organization") {
     dashboardLinks.push(
       { href: "/dashboard/organization/bursaries", label: "Manage Bursaries" }
+    );
+  }
+  
+  // Add admin-specific links
+  if (userRole === "admin") {
+    dashboardLinks.push(
+      { 
+        href: "/dashboard/analytics", 
+        label: "Analytics",
+        icon: <ChartBarIcon className="h-6 w-6" />
+      }
     );
   }
   
