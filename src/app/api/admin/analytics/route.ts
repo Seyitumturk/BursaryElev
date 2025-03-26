@@ -8,42 +8,56 @@ import OrganizationProfile from '@/models/OrganizationProfile';
 
 export async function GET() {
   try {
-    console.log("[Admin Analytics] API called");
-
+    // Connect to database
+    await dbConnect();
+    
     // Verify the user is authenticated
     const { userId, sessionClaims } = auth();
-    console.log("[Admin Analytics] Auth check - userId:", userId);
-    console.log("[Admin Analytics] Auth check - sessionClaims:", JSON.stringify(sessionClaims, null, 2));
     
-    // For debugging, continue even without authentication
-    let userIdToUse = userId;
+    // Different behavior based on environment
+    const isDev = process.env.NODE_ENV === 'development';
     
-    if (!userIdToUse) {
-      console.log("[Admin Analytics] No userId found, but continuing for debugging");
-      
-      // Connect to database
-      console.log("[Admin Analytics] Connecting to database to find any admin user");
-      await dbConnect();
-      
-      // Try to find any admin user to use for debugging
-      try {
-        const anyAdminUser = await User.findOne({ role: "admin" }).lean();
-        if (anyAdminUser) {
-          userIdToUse = anyAdminUser.clerkId;
-          console.log("[Admin Analytics] Using admin user found in database:", userIdToUse);
-        }
-      } catch (err) {
-        console.error("[Admin Analytics] Error finding admin user:", err);
-      }
-    } else {
-      // Connect to database if not already connected
-      console.log("[Admin Analytics] Connecting to database");
-      await dbConnect();
+    if (isDev) {
+      console.log("[Admin Analytics] Auth check - userId:", userId);
+      console.log("[Admin Analytics] Auth check - sessionClaims:", JSON.stringify(sessionClaims, null, 2));
     }
     
-    // BYPASS AUTHENTICATION COMPLETELY FOR DEBUGGING
-    console.log("[Admin Analytics] ⚠️ Authentication check bypassed for debugging");
-    console.log("[Admin Analytics] Proceeding to fetch data regardless of authentication status");
+    // Use auth bypass only in development mode
+    let userIdToUse = userId;
+    let isAdmin = false;
+    
+    // In production, strictly enforce authentication
+    if (!isDev && !userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    
+    // In production, check role properly
+    if (!isDev) {
+      // First check Clerk metadata
+      const clerkRole = sessionClaims?.metadata?.role;
+      
+      if (clerkRole === "admin") {
+        isAdmin = true;
+      } else {
+        // If not in Clerk metadata, check the database
+        const userDoc = await User.findOne({ clerkId: userId }).lean();
+        isAdmin = userDoc?.role === "admin";
+      }
+      
+      // For production, strictly enforce admin role
+      if (!isAdmin) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
+    } 
+    // Development mode allows bypassing admin check
+    else if (!userId) {
+      // In development, try to find any admin user if not authenticated
+      const anyAdminUser = await User.findOne({ role: "admin" }).lean();
+      if (anyAdminUser) {
+        userIdToUse = anyAdminUser.clerkId;
+        isAdmin = true;
+      }
+    }
     
     // Get current date and dates for time-based metrics
     const today = new Date();

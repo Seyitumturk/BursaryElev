@@ -13,68 +13,68 @@ export async function POST() {
 
 async function handleSyncRole() {
   try {
-    console.log("[Sync Role] API called");
+    // Connect to database first
+    await dbConnect();
+    
+    // Different behavior based on environment
+    const isDev = process.env.NODE_ENV === 'development';
     
     // Verify the user is authenticated
     const { userId } = auth();
-    console.log("[Sync Role] Auth result - userId:", userId);
     
-    // For debugging, continue even without authentication
+    if (isDev) {
+      console.log("[Sync Role] Auth result - userId:", userId);
+    }
+    
+    // In production, strictly enforce authentication
+    if (!isDev && !userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    
+    // For development mode, we might allow fallback to any admin user
     let userIdToUse = userId;
     
-    if (!userIdToUse) {
-      console.log("[Sync Role] No userId found, but continuing for debugging");
-      // Get user ID from localStorage if available on client
-      // For server-side, we'll try to find any admin user
-      try {
-        await dbConnect();
-        const anyAdminUser = await User.findOne({ role: "admin" }).lean();
-        if (anyAdminUser) {
-          userIdToUse = anyAdminUser.clerkId;
-          console.log("[Sync Role] Using admin user found in database:", userIdToUse);
-        }
-      } catch (err) {
-        console.error("[Sync Role] Error finding admin user:", err);
+    if (isDev && !userIdToUse) {
+      // Try to find any admin user for development testing
+      const anyAdminUser = await User.findOne({ role: "admin" }).lean();
+      if (anyAdminUser) {
+        userIdToUse = anyAdminUser.clerkId;
+        if (isDev) console.log("[Sync Role] Using admin user found in database:", userIdToUse);
       }
       
       if (!userIdToUse) {
-        console.log("[Sync Role] No userId available, returning error");
         return NextResponse.json({ 
           error: "Unauthorized", 
-          message: "For debugging purposes, make sure at least one admin user exists in the database"
+          message: "No user found to sync role with"
         }, { status: 401 });
       }
     }
-    
-    // Connect to database
-    await dbConnect();
     
     // Get user from database
     const userDoc = await User.findOne({ clerkId: userIdToUse }).lean();
     
     if (!userDoc) {
-      console.log("[Sync Role] User not found in database");
       return NextResponse.json({ 
         error: "User not found", 
         message: "No user with the given clerk ID found in the database"
       }, { status: 404 });
     }
     
-    console.log("[Sync Role] Found user in database:", userDoc);
-    console.log("[Sync Role] Database role:", userDoc.role);
+    if (isDev) {
+      console.log("[Sync Role] Found user in database:", userDoc);
+      console.log("[Sync Role] Database role:", userDoc.role);
+    }
     
     try {
       // Update Clerk user metadata with role from database
-      if (userIdToUse) {
-        await clerkClient.users.updateUserMetadata(userIdToUse, {
-          publicMetadata: {
-            role: userDoc.role
-          }
-        });
-        
+      await clerkClient.users.updateUserMetadata(userIdToUse, {
+        publicMetadata: {
+          role: userDoc.role
+        }
+      });
+      
+      if (isDev) {
         console.log("[Sync Role] Successfully updated Clerk metadata with role:", userDoc.role);
-      } else {
-        console.log("[Sync Role] Skipping Clerk metadata update - no userId available");
       }
       
       return NextResponse.json({ 

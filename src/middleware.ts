@@ -35,18 +35,22 @@ const isPublicRoute = createRouteMatcher([
 ]);
 
 export default clerkMiddleware((auth, req) => {
-  // For debugging - log the current path
-  console.log(`[Middleware] Request path: ${req.url}`);
-  console.log(`[Middleware] Auth details:`, {
-    userId: auth.userId,
-    sessionId: auth.sessionId,
-    hasRole: !!auth.sessionClaims?.metadata?.role,
-    role: auth.sessionClaims?.metadata?.role || 'none'
-  });
+  // Different logging based on environment
+  const isDev = process.env.NODE_ENV === 'development';
+
+  if (isDev) {
+    console.log(`[Middleware] Request path: ${req.url}`);
+    console.log(`[Middleware] Auth details:`, {
+      userId: auth.userId,
+      sessionId: auth.sessionId,
+      hasRole: !!auth.sessionClaims?.metadata?.role,
+      role: auth.sessionClaims?.metadata?.role || 'none'
+    });
+  }
   
   // Allow public routes to skip further middleware checks
   if (isPublicRoute(req)) {
-    console.log(`[Middleware] Public route detected, skipping auth checks`);
+    if (isDev) console.log(`[Middleware] Public route detected, skipping auth checks`);
     return NextResponse.next();
   }
 

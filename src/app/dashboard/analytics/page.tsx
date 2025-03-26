@@ -89,7 +89,15 @@ export default function AnalyticsDashboard() {
     console.log("Syncing user role with Clerk");
     
     try {
-      const response = await fetch('/api/admin/sync-role', {
+      // Get appropriate base URL based on environment
+      const baseUrl = typeof window !== 'undefined' 
+        ? window.location.origin 
+        : process.env.NEXT_PUBLIC_URL || '';
+      
+      const apiUrl = `${baseUrl}/api/admin/sync-role`;
+      console.log("Making API request to:", apiUrl);
+      
+      const response = await fetch(apiUrl, {
         method: 'POST',
         credentials: 'same-origin',
         headers: {
@@ -119,9 +127,16 @@ export default function AnalyticsDashboard() {
     setIsLoading(true);
     
     try {
+      // Get appropriate base URL based on environment
+      const baseUrl = typeof window !== 'undefined' 
+        ? window.location.origin 
+        : process.env.NEXT_PUBLIC_URL || '';
+      
       // Use the actual API endpoint with credentials
-      console.log("Making API request to /api/admin/analytics");
-      const response = await fetch('/api/admin/analytics', {
+      const apiUrl = `${baseUrl}/api/admin/analytics`;
+      console.log("Making API request to:", apiUrl);
+      
+      const response = await fetch(apiUrl, {
         method: 'GET',
         credentials: 'same-origin', // Include cookies for authentication
         headers: {

@@ -4,6 +4,11 @@ import dbConnect from '@/lib/dbConnect';
 import User from '@/models/User';
 
 export async function GET() {
+  // Only allow debug endpoint in development mode
+  if (process.env.NODE_ENV !== 'development') {
+    return NextResponse.json({ error: "This endpoint is only available in development mode" }, { status: 403 });
+  }
+  
   try {
     // Get auth information
     const { userId, sessionId, sessionClaims } = auth();
