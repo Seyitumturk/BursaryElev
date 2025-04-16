@@ -1201,18 +1201,22 @@ export default function BursariesPage() {
       const data = await response.json();
       
       if (data && data.summary) {
-        setBursarySummary(data.summary);
+        // Check if the summary is actually an error message from the backend
+        if (data.summary.startsWith("Error generating AI summary")) {
+          console.warn("Received error message as summary:", data.summary);
+          setBursarySummary(data.summary); // Display the specific error
+        } else {
+          setBursarySummary(data.summary); // Display the actual summary
+        }
       } else {
-        // In dev mode, we might want to show a placeholder for testing
-        console.log("No summary returned from API, generating placeholder");
-        const placeholderSummary = `This bursary opportunity (${bursaryId}) appears to match your academic background and financial needs. The award amount and deadline align well with your current situation, and the field of study requirements match your educational profile.`;
-        setBursarySummary(placeholderSummary);
+        // Handle case where API responded ok but no summary content was returned
+        console.log("API returned ok, but no summary content found.");
+        setBursarySummary("AI summary could not be generated for this bursary at this time.");
       }
     } catch (error) {
       console.error("Failed to fetch bursary summary:", error);
-      // Provide a more useful fallback for development
-      const fallbackSummary = "Unable to generate AI summary at this time. In development mode, you may need to ensure the summary API endpoint is functioning correctly.";
-      setBursarySummary(fallbackSummary);
+      // Fallback for network errors or API route failures
+      setBursarySummary("Unable to fetch AI summary due to a network or server issue. Please try again.");
     } finally {
       setSummaryLoading(false);
     }
@@ -1668,25 +1672,25 @@ export default function BursariesPage() {
                             return (
                               <>
                                 <div className="flex items-center mb-2">
+                                  {/* Eligibility Score Bar */}
                                   <div className="w-24 h-2 bg-gray-200 rounded-full mr-2 overflow-hidden">
                                     <div 
                                       className="h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full" 
-                                      style={{ width: `${match.matchScore.combinedScore || match.matchScore.total}%` }}
+                                      style={{ width: `${match.matchScore.eligibilityScore}%` }}
                                     />
                                   </div>
                                   <span className={`text-sm font-medium ${
-                                    (match.matchScore.combinedScore || match.matchScore.total) >= 80 ? "text-green-600 dark:text-green-400" : 
-                                    (match.matchScore.combinedScore || match.matchScore.total) >= 60 ? "text-yellow-600 dark:text-yellow-400" : 
+                                    match.matchScore.eligibilityScore >= 80 ? "text-green-600 dark:text-green-400" : 
+                                    match.matchScore.eligibilityScore >= 50 ? "text-yellow-600 dark:text-yellow-400" : 
                                     "text-gray-600 dark:text-gray-400"
                                   }`}>
-                                    {match.matchScore.combinedScore || match.matchScore.total}% Match
+                                    {match.matchScore.eligibilityScore}% Eligible
                                   </span>
                                   
-                                  {/* Badge for high AI match */}
-                                  {match.matchScore.aiMatchScore && match.matchScore.aiMatchScore >= 80 && (
-                                    <span className="ml-2 px-1.5 py-0.5 bg-purple-100 dark:bg-purple-900/40 rounded text-xxs text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800/30 flex items-center">
-                                      <SparklesIcon className="w-2.5 h-2.5 mr-0.5" />
-                                      AI Recommended
+                                  {/* Optional: Display AI Suitability Score if available */}
+                                  {match.matchScore.aiMatchScore !== undefined && (
+                                    <span className="ml-2 text-xs text-purple-600 dark:text-purple-400 bg-purple-100 dark:bg-purple-900/30 px-1.5 py-0.5 rounded-full flex items-center">
+                                       <SparklesIcon className="h-3 w-3 mr-0.5" /> {match.matchScore.aiMatchScore}% AI Fit
                                     </span>
                                   )}
                                 </div>
@@ -1821,25 +1825,25 @@ export default function BursariesPage() {
                                   return (
                                     <>
                                       <div className="flex items-center">
+                                        {/* Eligibility Score Bar */}
                                         <div className="w-20 h-2 bg-gray-200 dark:bg-gray-700 rounded-full mr-1.5 overflow-hidden">
                                           <div 
                                             className="h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full" 
-                                            style={{ width: `${match.matchScore.combinedScore || match.matchScore.total}%` }}
+                                            style={{ width: `${match.matchScore.eligibilityScore}%` }}
                                           />
                                         </div>
                                         <span className={`text-xs font-medium ${
-                                          (match.matchScore.combinedScore || match.matchScore.total) >= 80 ? "text-green-600 dark:text-green-400" : 
-                                          (match.matchScore.combinedScore || match.matchScore.total) >= 60 ? "text-yellow-600 dark:text-yellow-400" : 
+                                          match.matchScore.eligibilityScore >= 80 ? "text-green-600 dark:text-green-400" : 
+                                          match.matchScore.eligibilityScore >= 50 ? "text-yellow-600 dark:text-yellow-400" : 
                                           "text-gray-600 dark:text-gray-400"
                                         }`}>
-                                          {match.matchScore.combinedScore || match.matchScore.total}% Match
+                                          {match.matchScore.eligibilityScore}% Eligible
                                         </span>
                                         
-                                        {/* Badge for high AI match */}
-                                        {match.matchScore.aiMatchScore && match.matchScore.aiMatchScore >= 80 && (
-                                          <span className="ml-2 px-1.5 py-0.5 bg-purple-100 dark:bg-purple-900/40 rounded text-xxs text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800/30 flex items-center">
-                                            <SparklesIcon className="w-2.5 h-2.5 mr-0.5" />
-                                            AI Recommended
+                                        {/* Optional: Display AI Suitability Score if available */}
+                                        {match.matchScore.aiMatchScore !== undefined && (
+                                          <span className="ml-1.5 text-[10px] text-purple-600 dark:text-purple-400 bg-purple-100 dark:bg-purple-900/30 px-1 py-0.5 rounded-full flex items-center">
+                                             <SparklesIcon className="h-2.5 w-2.5 mr-0.5" /> {match.matchScore.aiMatchScore}% AI Fit
                                           </span>
                                         )}
                                       </div>
@@ -2173,6 +2177,13 @@ export default function BursariesPage() {
             {/* Match explanation - only for student users */}
             {userRole === "student" && matchesLoaded && selectedBursary && (() => {
               const match = matches.find(m => m.bursary._id === selectedBursary._id);
+              // --- DEBUG LOG START ---
+              if (match) {
+                console.log("Match object for detail panel:", JSON.stringify(match, null, 2));
+              } else {
+                console.log("No match object found for selected bursary:", selectedBursary._id);
+              }
+              // --- DEBUG LOG END ---
               if (match) {
                 return (
                   <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800/20">
@@ -2184,6 +2195,8 @@ export default function BursariesPage() {
                     {/* AI-generated explanation - Enhanced display */}
                     {match.matchScore.aiMatchExplanation && (
                       <div className="mb-4 p-4 bg-white dark:bg-blue-900/30 rounded-lg border border-blue-100 dark:border-blue-800/30">
+                        {/* --- DEBUG MARKER 1 --- */}
+                        <p style={{color: 'red', fontWeight: 'bold'}}>[DEBUG: AI Explanation Block Rendered]</p> 
                         <h4 className="text-sm font-medium text-purple-600 dark:text-purple-400 mb-2 flex items-center">
                           <SparklesIcon className="w-4 h-4 mr-1" />
                           AI Recommendation
@@ -2195,108 +2208,42 @@ export default function BursariesPage() {
                     )}
                     
                     {/* Match scores display */}
-                    <div className="mb-4">
-                      {/* Combined score - if available */}
-                      {match.matchScore.combinedScore !== undefined && (
-                        <div className="flex items-center mb-3">
-                          <span className="text-sm font-medium text-gray-600 dark:text-gray-300 mr-2">Combined Match:</span>
-                          <div className="w-32 h-2 bg-gray-200 dark:bg-gray-700 rounded-full mr-1.5 overflow-hidden">
-                            <div 
-                              className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full" 
-                              style={{ width: `${match.matchScore.combinedScore}%` }}
-                            />
-                          </div>
-                          <span className={`text-xs font-medium ${
-                            match.matchScore.combinedScore >= 80 ? "text-green-600 dark:text-green-400" : 
-                            match.matchScore.combinedScore >= 60 ? "text-yellow-600 dark:text-yellow-400" : 
-                            "text-gray-600 dark:text-gray-400"
-                          }`}>
-                            {match.matchScore.combinedScore}%
-                          </span>
-                        </div>
-                      )}
-                    
-                      {/* AI Semantic match score - if available */}
-                      {match.matchScore.aiMatchScore !== undefined && (
-                        <div className="flex items-center mb-3">
-                          <span className="text-sm font-medium text-gray-600 dark:text-gray-300 mr-2">AI Semantic Match:</span>
-                          <div className="w-32 h-2 bg-gray-200 dark:bg-gray-700 rounded-full mr-1.5 overflow-hidden">
-                            <div 
-                              className="h-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full" 
-                              style={{ width: `${match.matchScore.aiMatchScore}%` }}
-                            />
-                          </div>
-                          <span className={`text-xs font-medium ${
-                            match.matchScore.aiMatchScore >= 80 ? "text-green-600 dark:text-green-400" : 
-                            match.matchScore.aiMatchScore >= 60 ? "text-yellow-600 dark:text-yellow-400" : 
-                            "text-gray-600 dark:text-gray-400"
-                          }`}>
-                            {match.matchScore.aiMatchScore}%
-                          </span>
-                        </div>
-                      )}
-                      
-                      {/* Traditional match score */}
-                      <div className="flex items-center mb-2">
-                        <span className="text-sm font-medium text-gray-600 dark:text-gray-300 mr-2">Traditional Match:</span>
-                        <div className="w-32 h-2 bg-gray-200 dark:bg-gray-700 rounded-full mr-1.5 overflow-hidden">
-                          <div 
-                            className="h-full bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full" 
-                            style={{ width: `${match.matchScore.total}%` }}
-                          />
-                        </div>
-                        <span className={`text-xs font-medium ${
-                          match.matchScore.total >= 80 ? "text-green-600 dark:text-green-400" : 
-                          match.matchScore.total >= 60 ? "text-yellow-600 dark:text-yellow-400" : 
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                      {/* Eligibility Score */}
+                      <div className="flex flex-col items-center p-3 bg-white dark:bg-blue-900/30 rounded-lg border border-blue-100 dark:border-blue-800/30">
+                        <span className="text-xs font-medium text-blue-600 dark:text-blue-300 mb-1">Eligibility Score</span>
+                        <span className={`text-2xl font-bold ${
+                          match.matchScore.eligibilityScore >= 80 ? "text-green-600 dark:text-green-400" : 
+                          match.matchScore.eligibilityScore >= 50 ? "text-yellow-600 dark:text-yellow-400" : 
                           "text-gray-600 dark:text-gray-400"
                         }`}>
-                          {match.matchScore.total}%
+                          {match.matchScore.eligibilityScore}%
                         </span>
-                      </div>
-                    </div>
-                    
-                    {/* Traditional match metrics */}
-                    <h4 className="text-sm font-medium text-gray-600 dark:text-gray-300 mb-2">Match Breakdown:</h4>
-                    <div className="grid grid-cols-2 gap-2 mb-3">
-                      <div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400">Financial Need (40%)</div>
-                        <div className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                          <div className="h-full bg-green-500 rounded-full" style={{ width: `${match.matchScore.breakdown.financialNeed}%` }} />
-                        </div>
+                        <p className="text-xs text-center text-gray-500 dark:text-gray-400 mt-1">Based on core requirements like field of study, academic level, etc.</p>
                       </div>
                       
-                      <div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400">Academic Merit (30%)</div>
-                        <div className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                          <div className="h-full bg-blue-500 rounded-full" style={{ width: `${match.matchScore.breakdown.academicMerit}%` }} />
+                      {/* AI Suitability Score */}
+                      {match.matchScore.aiMatchScore !== undefined ? (
+                        <div className="flex flex-col items-center p-3 bg-white dark:bg-purple-900/20 rounded-lg border border-purple-100 dark:border-purple-800/30">
+                          {/* --- DEBUG MARKER 2 --- */}
+                          <p style={{color: 'lime', fontWeight: 'bold'}}>[DEBUG: AI Score Block Rendered]</p> 
+                           <span className="text-xs font-medium text-purple-600 dark:text-purple-300 mb-1 flex items-center">
+                             <SparklesIcon className="h-3.5 w-3.5 mr-1"/> AI Suitability Score
+                           </span>
+                          <span className={`text-2xl font-bold text-purple-700 dark:text-purple-400`}>
+                            {match.matchScore.aiMatchScore}%
+                          </span>
+                          <p className="text-xs text-center text-gray-500 dark:text-gray-400 mt-1">AI analysis of profile alignment with bursary goals & focus.</p>
                         </div>
-                      </div>
-                      
-                      <div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400">Extracurriculars (20%)</div>
-                        <div className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                          <div className="h-full bg-purple-500 rounded-full" style={{ width: `${match.matchScore.breakdown.extracurriculars}%` }} />
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400">Demographics (10%)</div>
-                        <div className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                          <div className="h-full bg-yellow-500 rounded-full" style={{ width: `${match.matchScore.breakdown.demographics}%` }} />
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      {match.matchScore.reasons && match.matchScore.reasons.length > 0 ? (
-                        match.matchScore.reasons.map((reason: string, i: number) => (
-                          <div key={i} className="text-sm text-gray-700 dark:text-gray-300">
-                            {reason}
-                          </div>
-                        ))
                       ) : (
-                        <div className="text-sm text-gray-700 dark:text-gray-300">
-                          This bursary appears to be a potential match based on your profile information.
+                         <div className="flex flex-col items-center justify-center p-3 bg-gray-100 dark:bg-gray-700/30 rounded-lg border border-gray-200 dark:border-gray-600/30">
+                            {/* --- DEBUG MARKER 3 --- */}
+                           <p style={{color: 'orange', fontWeight: 'bold'}}>[DEBUG: AI Score N/A Block Rendered]</p> 
+                           <span className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 flex items-center">
+                             <SparklesIcon className="h-3.5 w-3.5 mr-1"/> AI Suitability Score
+                           </span>
+                          <span className="text-base font-medium text-gray-600 dark:text-gray-400">N/A</span>
+                          <p className="text-xs text-center text-gray-500 dark:text-gray-400 mt-1">AI analysis could not be performed.</p>
                         </div>
                       )}
                     </div>

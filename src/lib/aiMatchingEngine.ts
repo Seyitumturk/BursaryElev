@@ -37,6 +37,8 @@ export interface AIMatchScore {
  */
 export async function generateStudentSummary(student: IStudentProfile): Promise<string> {
   try {
+    console.log(`Generating summary for student: Institution=${student.institution}, Major=${student.major}`);
+    
     const studentProfileData = {
       academic: {
         institution: student.institution,
@@ -59,12 +61,33 @@ export async function generateStudentSummary(student: IStudentProfile): Promise<
       }
     };
 
+    console.log('Student profile data for Claude:', JSON.stringify(studentProfileData).substring(0, 500) + '...');
+
     const prompt = `
-      You are an AI assistant helping with student profile summarization.
-      Based on the following student information, generate a comprehensive, detailed summary that captures the essence of this student's profile.
-      Focus on academic background, skills, interests, financial needs, and career aspirations.
-      Be specific about their qualifications, achievements, and how they might match with scholarship opportunities.
-      Keep your response thorough and detailed (250-300 words) to provide a complete picture of the student's qualifications and needs.
+      You are Claude, a helpful, friendly AI assistant analyzing a student's profile for bursary matches.
+      
+      I need you to craft a CONVERSATIONAL, PERSONALIZED summary of this student's profile, speaking directly TO the student in a warm, supportive tone.
+      
+      IMPORTANT TONE/STYLE REQUIREMENTS:
+      - Use "you" language - speak DIRECTLY to the student
+      - Be warm, encouraging and supportive but not overly enthusiastic
+      - Sound like a helpful advisor who genuinely sees their potential
+      - Be specific about their unique qualities, don't use generic praise
+      - Keep your tone natural and conversational, not formal
+      
+      CONTENT REQUIREMENTS:
+      1. Start with a friendly, personalized greeting acknowledging their major and institution
+      2. Highlight 2-3 specific strengths from their profile (skills, achievements, etc.)
+      3. Briefly mention their career goals and how they align with their background
+      4. Add 1-2 specific funding opportunity suggestions based on their field/background
+      5. Conclude with brief, genuine encouragement
+      
+      FORMAT:
+      - Write this as a single, cohesive 4-5 paragraph message (200-250 words)
+      - No bullet points, no headers, just a natural-sounding message
+      - Avoid phrases like "Based on your profile" - just speak naturally
+      
+      CRITICAL: Only mention information EXPLICITLY included in their profile data. DO NOT make assumptions about their interests or create fictional details.
       
       Student Profile Data:
       ${JSON.stringify(studentProfileData, null, 2)}
@@ -96,7 +119,7 @@ export async function generateStudentSummary(student: IStudentProfile): Promise<
 }
 
 /**
- * Generates a summary of a bursary using Claude 3.7
+ * Generates a summary of the bursary using Claude 3.7
  * @param bursary The bursary object
  * @returns A comprehensive summary of the bursary
  */
@@ -105,23 +128,40 @@ export async function generateBursarySummary(bursary: IBursary): Promise<string>
     const bursaryData = {
       title: bursary.title,
       description: bursary.description,
-      eligibilityCriteria: bursary.eligibilityCriteria,
       awardAmount: bursary.awardAmount,
       fieldOfStudy: bursary.fieldOfStudy,
       academicLevel: bursary.academicLevel,
+      deadline: bursary.deadline,
       financialNeedLevel: bursary.financialNeedLevel,
-      requiredDocuments: bursary.requiredDocuments,
+      eligibilityCriteria: bursary.eligibilityCriteria,
       aiTags: bursary.aiTags,
       aiCategorization: bursary.aiCategorization,
-      applicationComplexity: bursary.applicationComplexity,
+      requiredDocuments: bursary.requiredDocuments,
+      applicationUrl: bursary.applicationUrl,
+      applicationComplexity: bursary.applicationComplexity
     };
 
     const prompt = `
-      You are an AI assistant helping with bursary summarization.
-      Based on the following bursary information, generate a comprehensive, detailed summary that captures the key details of this opportunity.
-      Focus on eligibility requirements, financial aspects, target fields of study, required academic level, and application process.
-      Include specific details about award amount, deadlines (if available), and qualification criteria.
-      Keep your response thorough and detailed (250-300 words) to provide potential applicants with all relevant information.
+      You are an AI assistant helping with bursary opportunity summarization for a student matching platform.
+      
+      Based on the following bursary information, create a structured, detailed summary specifically designed for matching with student profiles.
+      
+      BURSARY SUMMARY STRUCTURE:
+      1. Clearly identify key matching criteria in a consistent, structured format
+      2. Highlight SPECIFIC requirements that will be used to determine student compatibility:
+         - Exact field(s) of study required
+         - Financial need level expected
+         - Academic qualifications (GPA, year of study, institution types)
+         - Specific skills or experiences valued
+         - Demographic/eligibility restrictions
+      3. Include concrete details about award amount, deadline, and application process
+      
+      FORMAT REQUIREMENTS:
+      - Use clear headings and bullet points
+      - Prioritize information that will be used for matching algorithms
+      - Be concise but comprehensive (250-300 words total)
+      - Focus on FACTUAL criteria rather than subjective descriptions
+      - Include ALL relevant eligibility requirements
       
       Bursary Data:
       ${JSON.stringify(bursaryData, null, 2)}
@@ -129,7 +169,7 @@ export async function generateBursarySummary(bursary: IBursary): Promise<string>
 
     const apiUrl = getApiUrl();
     console.log(`Making bursary summary request to: ${apiUrl}`);
-
+    
     const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
@@ -144,11 +184,12 @@ export async function generateBursarySummary(bursary: IBursary): Promise<string>
     }
 
     const data = await response.json();
-    return data.response || "No bursary summary generated";
+    return data.response;
   } catch (error) {
     console.error("Error generating bursary summary:", error);
-    // Fallback to a basic summary if Claude API fails
-    return `${bursary.title} - ${bursary.description.substring(0, 100)}...`;
+    // Return a more specific error message instead of a generic fallback
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return `Error generating AI summary for ${bursary.title}: ${errorMessage}. Please try again later or contact support.`;
   }
 }
 
@@ -164,38 +205,47 @@ export async function calculateAISemanticMatch(
 ): Promise<{ score: number; explanation: string }> {
   try {
     const prompt = `
-      You are an AI assistant evaluating the match between a student and a bursary opportunity.
+      You are an AI assistant evaluating the SUITABILITY and POTENTIAL FIT between a student and a bursary opportunity, going beyond basic eligibility.
+      Assume basic eligibility checks (field of study, academic level) have been performed elsewhere. 
+      Focus on the nuanced alignment between the student's profile and the bursary's goals and focus.
       
-      Student Summary:
+      Student Summary (Highlights skills, goals, experiences):
       "${studentSummary}"
       
-      Bursary Summary:
+      Bursary Summary (Describes purpose, ideal candidate, specific criteria beyond academics):
       "${bursarySummary}"
       
-      Based on these summaries, calculate a match score from 0-100 indicating how well the student matches with this bursary opportunity.
+      TASK: Calculate an AI SUITABILITY score (0-100) representing how well this student's PROFILE aligns with the INTENT and specific FOCUS AREAS of this bursary.
       
-      IMPORTANT INSTRUCTIONS FOR YOUR RESPONSE:
-      1. Be HIGHLY SPECIFIC to this exact bursary's criteria and the student's qualifications
-      2. Reference concrete details from the bursary (exact field of study, award amount, eligibility criteria)
-      3. Mention specific aspects of the student's profile that match or don't match
-      4. Use a factual, objective tone that accurately reflects the match quality
-      5. Your explanation must be tailored uniquely to this specific bursary-student combination
+      EVALUATION CRITERIA (Focus on these aspects):
+      1. Skill & Experience Alignment (35% weight)
+         - Do the student's specific skills, projects, or experiences strongly align with requirements or preferences mentioned in the bursary (e.g., leadership, research, specific software, community involvement)?
+         - How relevant is their background to the bursary's specific domain or purpose?
       
-      Match score guidelines:
-      - For low scores (0-40): Clearly explain specific mismatches between student profile and bursary requirements
-      - For medium scores (41-70): Balance specific matches and mismatches objectively
-      - For high scores (71-100): Highlight specific alignments without overstatement
+      2. Career Goal / Bursary Purpose Alignment (30% weight)
+         - Do the student's stated career goals resonate with the bursary's mission or the field it supports?
+         - Does the bursary support a path the student seems genuinely interested in?
       
-      Provide your response in JSON format with two fields:
-      1. "score": A number between 0-100 
-      2. "explanation": A specific assessment (50-75 words) that references concrete details from both the bursary and student profile
+      3. Financial Need Context (if applicable) (20% weight)
+         - Considering the bursary's stated financial need level, does the student's situation (as described in their summary) seem appropriate for this type of award?
+         - Does the bursary aim to support students with specific financial circumstances mentioned by the student?
       
-      Examples of GOOD explanations:
-      {"score": 85, "explanation": "Strong match for this Computer Science scholarship requiring 3.5+ GPA. Student's 3.8 GPA in CS at Stanford and machine learning expertise align with the bursary's focus on AI research. Financial need level matches the bursary's high-need requirement. Application deadline (March 15) allows sufficient preparation time."}
+      4. Overall Profile Resonance (15% weight)
+         - Does the student's overall profile (interests, achievements, bio) paint a picture of someone who would be a strong candidate for *this specific* bursary?
+         - Are there unique aspects of the student profile that align exceptionally well with unique aspects of the bursary?
+
+      SCORE GUIDELINES (Reflecting Suitability):
+      - 90-100: Exceptional fit; student profile strongly resonates with the bursary's specific aims and desired candidate profile.
+      - 70-89: Strong suitability; clear alignment in key areas like skills, goals, or specific criteria.
+      - 50-69: Moderate suitability; some alignment, but perhaps less targeted to this specific opportunity compared to others.
+      - 30-49: Limited suitability; profile aligns weakly with the bursary's specific focus.
+      - 0-29: Poor suitability; profile seems misaligned with the bursary's intent or target candidate.
       
-      {"score": 45, "explanation": "Limited alignment with this $5,000 Engineering scholarship. Student's Biology major doesn't match Engineering requirement, though programming skills are relevant. Financial need matches the medium requirement. Student's 2023 graduation aligns with junior/senior requirement, but field mismatch significantly reduces overall compatibility."}
-      
-      NEVER use generic language like "promising alignment" or "good compatibility" without specific details.
+      YOUR RESPONSE MUST:
+      1. Focus on the NUANCE of the match, not just basic eligibility.
+      2. Reference SPECIFIC details from BOTH summaries (skills, goals, bursary focus) to justify the score.
+      3. Provide a clear, concise explanation (75-100 words) highlighting the key reasons for the suitability score.
+      4. Output in JSON format with "score" (0-100 number) and "explanation" (string).
     `;
 
     const apiUrl = getApiUrl();
@@ -270,4 +320,4 @@ export async function calculateAIMatch(
     studentSummary,
     bursarySummary
   };
-} 
+}

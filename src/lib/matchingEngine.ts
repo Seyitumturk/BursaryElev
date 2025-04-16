@@ -2,134 +2,134 @@ import { IBursary } from '../models/Bursary';
 import { IStudentProfile } from '../models/StudentProfile';
 import { calculateAIMatch, AIMatchScore } from './aiMatchingEngine';
 
+// Updated interface reflecting Eligibility and AI Suitability scores
 export interface MatchScore {
-  total: number;
+  eligibilityScore: number; // Renamed from 'total'
   breakdown: {
+    fieldOfStudy: number;    // New breakdown field
+    academicLevel: number;   // New breakdown field
     financialNeed: number;
-    academicMerit: number;
-    extracurriculars: number;
     demographics: number;
+    // Removed 'academicMerit' and 'extracurriculars' as distinct weighted categories
   };
   reasons: string[];
-  conversationalExplanation: string;
-  // New AI-generated fields
-  aiMatchScore?: number;
+  conversationalExplanation: string; 
+  // AI-generated fields remain
+  aiMatchScore?: number; // Represents AI Suitability Score
   aiMatchExplanation?: string;
-  combinedScore?: number;
   studentSummary?: string;
   bursarySummary?: string;
+  // Removed 'combinedScore'
 }
 
 /**
- * Calculates match score between a student profile and a bursary
+ * Calculates match scores between a student profile and a bursary.
+ * Focuses on an objective Eligibility Score and an AI-driven Suitability Score.
  * @param student Student profile
  * @param bursary Bursary listing
- * @param includeAI Whether to include AI-based matching (optional, defaults to false)
- * @returns Match score (1-100) with breakdown and reasons
+ * @param includeAI Whether to include AI-based suitability matching
+ * @returns MatchScore object with eligibility and potentially AI scores
  */
 export async function calculateMatch(
   student: IStudentProfile, 
   bursary: IBursary,
   includeAI: boolean = false
 ): Promise<MatchScore> {
-  // Initialize scores
+  // Initialize scores for Eligibility breakdown
   const breakdown = {
-    financialNeed: 0,     // 40% weight
-    academicMerit: 0,     // 30% weight
-    extracurriculars: 0,  // 20% weight 
-    demographics: 0       // 10% weight
+    fieldOfStudy: 0,      // 40% weight
+    academicLevel: 0,    // 25% weight
+    financialNeed: 0,     // 20% weight
+    demographics: 0       // 15% weight
   };
   
-  // Store match reasons
   const reasons: string[] = [];
   
-  // 1. Financial Need Matching (40%)
+  // 1. Field of Study Match (40%)
+  const fieldOfStudyScore = calculateFieldOfStudyScore(student, bursary);
+  breakdown.fieldOfStudy = fieldOfStudyScore.score;
+  if (fieldOfStudyScore.reason) {
+    reasons.push(fieldOfStudyScore.reason);
+  }
+
+  // 2. Academic Level Match (25%)
+  const academicLevelScore = calculateAcademicLevelScore(student, bursary);
+  breakdown.academicLevel = academicLevelScore.score;
+  if (academicLevelScore.reason) {
+    reasons.push(academicLevelScore.reason);
+  }
+
+  // 3. Financial Need Match (20%)
   const financialNeedScore = calculateFinancialNeedScore(student, bursary);
   breakdown.financialNeed = financialNeedScore.score;
   if (financialNeedScore.reason) {
     reasons.push(financialNeedScore.reason);
   }
-  
-  // 2. Academic Merit Matching (30%)
-  const academicMeritScore = calculateAcademicMeritScore(student, bursary);
-  breakdown.academicMerit = academicMeritScore.score;
-  if (academicMeritScore.reason) {
-    reasons.push(academicMeritScore.reason);
-  }
-  
-  // 3. Extracurricular Matching (20%)
-  const extracurricularScore = calculateExtracurricularScore(student, bursary);
-  breakdown.extracurriculars = extracurricularScore.score;
-  if (extracurricularScore.reason) {
-    reasons.push(extracurricularScore.reason);
-  }
-  
-  // 4. Demographic Matching (10%)
+
+  // 4. Demographic/Location Match (15%)
   const demographicScore = calculateDemographicScore(student, bursary);
   breakdown.demographics = demographicScore.score;
   if (demographicScore.reason) {
     reasons.push(demographicScore.reason);
   }
   
-  // Calculate total weighted score (1-100)
-  const total = Math.round(
-    (breakdown.financialNeed * 0.4) + 
-    (breakdown.academicMerit * 0.3) + 
-    (breakdown.extracurriculars * 0.2) + 
-    (breakdown.demographics * 0.1)
+  // Calculate final Eligibility Score (weighted average)
+  const eligibilityScore = Math.round(
+    (breakdown.fieldOfStudy * 0.40) +
+    (breakdown.academicLevel * 0.25) +
+    (breakdown.financialNeed * 0.20) +
+    (breakdown.demographics * 0.15)
   );
   
-  // Generate conversational explanation
+  // Generate conversational explanation based on eligibility
+  // We might adjust this later if the AI explanation should always take precedence
   const conversationalExplanation = generateConversationalExplanation(
     student,
     bursary,
-    total,
+    eligibilityScore, // Use eligibility score here
     breakdown,
     reasons
   );
   
-  // Create the base match score
+  // Create the base match score object
   const matchScore: MatchScore = {
-    total,
-    breakdown,
-    reasons: reasons.slice(0, 3), // Limit to top 3 reasons
+    eligibilityScore, // Use the new name
+    breakdown, // Contains the new breakdown fields
+    reasons: reasons.slice(0, 3), 
     conversationalExplanation
+    // aiMatchScore and others added below if includeAI is true
   };
   
-  // If AI matching is requested, add AI-based scores
+  // If AI matching is requested, calculate and add AI Suitability Score
   if (includeAI) {
     try {
       console.log(`Calculating AI match for bursary: ${bursary.title} (${bursary._id})`);
-      
       const aiMatch: AIMatchScore = await calculateAIMatch(student, bursary);
+      console.log(`AI Suitability Score calculated: ${aiMatch.score}/100`);
       
-      console.log(`AI match calculated successfully: ${aiMatch.score}/100`);
-      
-      // Add AI scores to the match result
       matchScore.aiMatchScore = aiMatch.score;
       matchScore.aiMatchExplanation = aiMatch.explanation;
       matchScore.studentSummary = aiMatch.studentSummary;
       matchScore.bursarySummary = aiMatch.bursarySummary;
       
-      // If AI explanation is available, replace the conversational explanation with it
+      // Optionally: Always prefer AI explanation if available
       if (aiMatch.explanation) {
         matchScore.conversationalExplanation = aiMatch.explanation;
       }
       
-      // Calculate combined score (50% static, 50% AI)
-      matchScore.combinedScore = Math.round((total + aiMatch.score) / 2);
+      // REMOVED combinedScore calculation
+
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error(`Error calculating AI match for bursary ${bursary._id}:`, errorMessage);
-      
+      console.error(`Error calculating AI Suitability Score for bursary ${bursary._id}:`, errorMessage);
       if (error instanceof Error && error.cause) {
         console.error("Error cause:", error.cause);
       }
       
-      // If AI matching fails, set default values
-      matchScore.aiMatchScore = 0;
-      matchScore.aiMatchExplanation = "AI matching not available at this time.";
-      matchScore.combinedScore = total; // Use only static score if AI fails
+      // Set default AI values on failure
+      matchScore.aiMatchScore = undefined; // Indicate AI score calculation failed
+      matchScore.aiMatchExplanation = "AI suitability analysis not available due to an error.";
+      // eligibilityScore remains as calculated
     }
   }
   
@@ -197,121 +197,73 @@ function calculateFinancialNeedScore(student: IStudentProfile, bursary: IBursary
   return { score, reason };
 }
 
-function calculateAcademicMeritScore(student: IStudentProfile, bursary: IBursary): ScoreWithReason {
+// NEW: calculateFieldOfStudyScore (replaces part of academicMerit)
+function calculateFieldOfStudyScore(student: IStudentProfile, bursary: IBursary): ScoreWithReason {
   let score = 0;
   let reason = null;
-  
-  // Check if field of study matches
-  const fieldMatch = bursary.fieldOfStudy.some(field => 
-    student.major.toLowerCase().includes(field.toLowerCase()) ||
-    field.toLowerCase().includes('any') ||
-    field.toLowerCase().includes('all')
+  const studentMajorLower = student.major.toLowerCase();
+  const requiredFieldsLower = bursary.fieldOfStudy.map(f => f.toLowerCase());
+
+  const isMatch = requiredFieldsLower.some(field => 
+    studentMajorLower.includes(field) || 
+    field.includes(studentMajorLower) || // Handle cases where major is more specific than required field
+    field.includes('any') || 
+    field.includes('all')
   );
-  
-  // Check institution match (simple implementation - could be expanded)
-  const institutionFactorScore = 20; // Base score for institution
-  
-  // Check if academic level matches (simple implementation)
-  const currentYear = new Date().getFullYear();
-  const yearsToGraduation = student.graduationYear - currentYear;
-  let academicLevelScore = 0;
-  
-  // Map years to graduation to likely academic levels
-  let studentAcademicLevel = '';
-  if (yearsToGraduation <= 0) {
-    studentAcademicLevel = 'graduate';
-  } else if (yearsToGraduation === 1) {
-    studentAcademicLevel = 'senior';
-  } else if (yearsToGraduation === 2) {
-    studentAcademicLevel = 'junior';
-  } else if (yearsToGraduation === 3) {
-    studentAcademicLevel = 'sophomore';
+
+  if (isMatch) {
+    score = 100;
+    reason = `Your major (${student.major}) aligns with the required field(s) of study (${bursary.fieldOfStudy.join(', ')}).`;
   } else {
-    studentAcademicLevel = 'freshman';
+    score = 0; // Hard mismatch for eligibility
+    reason = `Your major (${student.major}) does not match the required field(s) of study (${bursary.fieldOfStudy.join(', ')}).`;
   }
-  
-  const levelMatch = bursary.academicLevel.some(level => 
-    level.toLowerCase().includes(studentAcademicLevel.toLowerCase()) ||
-    level.toLowerCase().includes('any') ||
-    level.toLowerCase().includes('all') ||
-    level.toLowerCase() === 'undergraduate'
-  );
-  
-  if (levelMatch) {
-    academicLevelScore = 30;
-  }
-  
-  // Field of study is the most important factor
-  if (fieldMatch) {
-    score += 50;
-    reason = `Strong match for academic merit because your major (${student.major}) aligns with the bursary's field of study (${bursary.fieldOfStudy.join(', ')})`;
-  } else {
-    score += 10;
-  }
-  
-  // Add other academic factors
-  score += institutionFactorScore + academicLevelScore;
-  
-  // Normalize score to 100
-  score = Math.min(score, 100);
   
   return { score, reason };
 }
 
-function calculateExtracurricularScore(student: IStudentProfile, bursary: IBursary): ScoreWithReason {
+// NEW: calculateAcademicLevelScore (replaces part of academicMerit)
+function calculateAcademicLevelScore(student: IStudentProfile, bursary: IBursary): ScoreWithReason {
   let score = 0;
   let reason = null;
-  
-  // Check if student has relevant skills/achievements that match bursary tags or categories
-  const tagsMatch = bursary.aiTags.some(tag => {
-    // Check if tag appears in skills, interests, or achievements
-    return (
-      student.skills?.some(skill => skill.toLowerCase().includes(tag.toLowerCase())) ||
-      student.interests?.some(interest => interest.toLowerCase().includes(tag.toLowerCase())) ||
-      student.achievements?.some(achievement => achievement.toLowerCase().includes(tag.toLowerCase()))
-    );
-  });
-  
-  const categoriesMatch = bursary.aiCategorization.some(category => {
-    // Check if category appears in skills, interests, or achievements
-    return (
-      student.skills?.some(skill => skill.toLowerCase().includes(category.toLowerCase())) ||
-      student.interests?.some(interest => interest.toLowerCase().includes(category.toLowerCase())) ||
-      student.achievements?.some(achievement => achievement.toLowerCase().includes(category.toLowerCase()))
-    );
-  });
-  
-  // Award points based on matches
-  if (tagsMatch) {
-    score += 50;
-    
-    // Find the matching tag for the reason
-    const matchingTag = bursary.aiTags.find(tag => 
-      student.skills?.some(skill => skill.toLowerCase().includes(tag.toLowerCase())) ||
-      student.interests?.some(interest => interest.toLowerCase().includes(tag.toLowerCase())) ||
-      student.achievements?.some(achievement => achievement.toLowerCase().includes(tag.toLowerCase()))
-    );
-    
-    reason = `Strong match for extracurricular activities because your profile mentions ${matchingTag}, which aligns with this bursary's focus areas`;
+  const requiredLevelsLower = bursary.academicLevel.map(l => l.toLowerCase());
+
+  if (requiredLevelsLower.length === 0 || requiredLevelsLower.includes('any') || requiredLevelsLower.includes('all')) {
+    score = 100; // No specific level required
+    reason = "This bursary is open to students at any academic level.";
+    return { score, reason };
   }
+
+  const currentYear = new Date().getFullYear();
+  const yearsToGraduation = student.graduationYear - currentYear;
+  let studentLevel = '';
   
-  if (categoriesMatch) {
-    score += 30;
+  // Determine student level more robustly
+  if (yearsToGraduation <= 0) studentLevel = 'graduate'; // Or Post-Graduate, PhD etc.
+  else if (yearsToGraduation === 1) studentLevel = 'final year undergraduate'; // More specific
+  else if (yearsToGraduation === 2) studentLevel = '3rd year undergraduate'; // Assuming 4-year degree
+  else if (yearsToGraduation === 3) studentLevel = '2nd year undergraduate';
+  else if (yearsToGraduation >= 4) studentLevel = '1st year undergraduate';
+  else studentLevel = 'undergraduate'; // Fallback
+
+  const studentLevelLower = studentLevel.toLowerCase();
+
+  const isMatch = requiredLevelsLower.some(level => {
+    if (studentLevelLower.includes(level)) return true;
+    if (level === 'undergraduate' && studentLevelLower.includes('undergraduate')) return true;
+    if (level === 'graduate' && studentLevelLower.includes('graduate')) return true;
+    // Add more specific checks if needed (e.g., 'masters', 'phd')
+    return false;
+  });
+
+  if (isMatch) {
+    score = 100;
+    reason = `Your academic level (${studentLevel}) matches the requirements (${bursary.academicLevel.join(', ')}).`;
+  } else {
+    score = 0; // Hard mismatch for eligibility
+    reason = `Your academic level (${studentLevel}) does not meet the requirements (${bursary.academicLevel.join(', ')}).`;
   }
-  
-  // Award points for having a variety of skills, interests, achievements
-  const diversityScore = Math.min(
-    ((student.skills?.length || 0) + 
-     (student.interests?.length || 0) + 
-     (student.achievements?.length || 0)) * 2, 
-    20
-  );
-  
-  score += diversityScore;
-  
-  // Normalize score to 100
-  score = Math.min(score, 100);
-  
+
   return { score, reason };
 }
 
@@ -380,84 +332,53 @@ export function generateMatchExplanation(matchScore: MatchScore): string {
   return matchScore.reasons.join("\n\n");
 }
 
-/**
- * Generates a conversational explanation of why a student matches with a bursary
- */
+// Updated: generateConversationalExplanation to reflect new breakdown and score name
 function generateConversationalExplanation(
   student: IStudentProfile,
   bursary: IBursary,
-  totalScore: number,
+  eligibilityScore: number, // Changed parameter name
   breakdown: {
+    fieldOfStudy: number;
+    academicLevel: number;
     financialNeed: number;
-    academicMerit: number;
-    extracurriculars: number;
     demographics: number;
   },
   reasons: string[]
 ): string {
   let explanation = "";
   
-  // Start with overall match quality
-  if (totalScore >= 85) {
-    explanation = `This is an excellent match for you! With a match score of ${totalScore}%, the ${bursary.title} bursary aligns very well with your profile. `;
-  } else if (totalScore >= 70) {
-    explanation = `I've found a strong match for you! This ${bursary.title} bursary has a ${totalScore}% match with your profile. `;
-  } else if (totalScore >= 50) {
-    explanation = `The ${bursary.title} bursary looks like a decent match for you with a ${totalScore}% match score. `;
+  // Base explanation on Eligibility Score
+  if (eligibilityScore >= 95) {
+    explanation = `Based on the core requirements, this looks like an excellent eligibility match (${eligibilityScore}%). `;
+  } else if (eligibilityScore >= 75) {
+    explanation = `You meet most of the core eligibility requirements for the ${bursary.title} bursary (${eligibilityScore}%). `;
+  } else if (eligibilityScore >= 50) {
+    explanation = `You meet some eligibility requirements for the ${bursary.title} (${eligibilityScore}% match), but there may be gaps. `;
   } else {
-    explanation = `While not a perfect fit, the ${bursary.title} bursary might still be worth considering (${totalScore}% match). `;
+    explanation = `Based on the core requirements, you may not be eligible for the ${bursary.title} bursary (${eligibilityScore}% match). `;
   }
   
-  // Add details about the strongest match areas
-  const strongestAreas = [];
-  if (breakdown.financialNeed >= 70) strongestAreas.push("financial needs");
-  if (breakdown.academicMerit >= 70) strongestAreas.push("academic background");
-  if (breakdown.extracurriculars >= 70) strongestAreas.push("extracurricular activities");
-  if (breakdown.demographics >= 70) strongestAreas.push("demographic criteria");
-  
-  if (strongestAreas.length > 0) {
-    explanation += `It particularly complements your ${strongestAreas.join(" and ")}. `;
+  // Highlight key reasons (especially mismatches if score is low)
+  if (eligibilityScore < 75 && reasons.length > 0) {
+    const mismatchReasons = reasons.filter(r => 
+        breakdown.fieldOfStudy === 0 || 
+        breakdown.academicLevel === 0 || 
+        breakdown.demographics < 50 || // Example threshold
+        breakdown.financialNeed < 50
+    );
+    if (mismatchReasons.length > 0) {
+        explanation += `Key areas to check: ${mismatchReasons.join('. ')}. `;
+    } else if (reasons.length > 0) {
+        // If score is low but no hard mismatches, mention the top reason
+        explanation += reasons[0].replace(/^Strong match for|^Good match for|^Partial match for|^Match for/i, 'Specifically, concerning') + '. ';
+    }
+  } else if (reasons.length > 0) {
+      // If score is high, mention the top positive reason
+      explanation += reasons[0].replace(/^Your /i, 'Your ') + '. ';
   }
-  
-  // Add specific details from the top matching reason
-  if (reasons.length > 0) {
-    // Clean up the reason text for conversational flow
-    const topReason = reasons[0]
-      .replace("Strong match for", "The match is especially strong in")
-      .replace("Additional consideration:", "Also worth noting:");
-    
-    explanation += topReason + " ";
-  }
-  
-  // Add information about the bursary amount and deadline
-  explanation += `This opportunity offers ${formatCurrency(bursary.awardAmount)} `;
-  
-  // Add deadline information
-  const deadlineDate = new Date(bursary.deadline);
-  const today = new Date();
-  const daysToDeadline = Math.ceil((deadlineDate.getTime() - today.getTime()) / (1000 * 3600 * 24));
-  
-  if (daysToDeadline < 0) {
-    explanation += "though please note the deadline has passed. ";
-  } else if (daysToDeadline === 0) {
-    explanation += "and the application is due today! ";
-  } else if (daysToDeadline <= 7) {
-    explanation += `and applications are due very soon (${daysToDeadline} days left). `;
-  } else if (daysToDeadline <= 30) {
-    explanation += `with applications due in ${daysToDeadline} days. `;
-  } else {
-    explanation += `with plenty of time to apply (deadline: ${formatDate(bursary.deadline)}). `;
-  }
-  
-  // Add a closing recommendation
-  if (totalScore >= 70) {
-    explanation += "I highly recommend applying for this opportunity.";
-  } else if (totalScore >= 50) {
-    explanation += "This could be a good opportunity to consider.";
-  } else {
-    explanation += "You might want to explore this alongside other better-matched opportunities.";
-  }
-  
+
+  explanation += `Award amount: ${formatCurrency(bursary.awardAmount)}. Deadline: ${formatDate(bursary.deadline)}.`;
+
   return explanation;
 }
 
@@ -491,7 +412,6 @@ export async function getRecommendedBursaries(
   bursaries: IBursary[],
   includeAI: boolean = false
 ) {
-  // Process all matches asynchronously
   const matchPromises = bursaries.map(async (bursary) => {
     try {
       const matchScore = await calculateMatch(student, bursary, includeAI);
@@ -501,19 +421,12 @@ export async function getRecommendedBursaries(
       };
     } catch (error) {
       console.error(`Error calculating match for bursary ${bursary._id}:`, error);
-      // Return a fallback match score if AI matching fails
       const fallbackScore: MatchScore = {
-        total: 50, // Default medium score
-        breakdown: {
-          financialNeed: 50,
-          academicMerit: 50,
-          extracurriculars: 50,
-          demographics: 50
-        },
-        reasons: ["Match calculation encountered an error, using fallback score."],
-        conversationalExplanation: `This is a ${bursary.title} opportunity. Please review the details manually.`
+        eligibilityScore: 0, // Default to 0 eligibility on error
+        breakdown: { fieldOfStudy: 0, academicLevel: 0, financialNeed: 0, demographics: 0 },
+        reasons: ["Match calculation failed."],
+        conversationalExplanation: `Could not calculate match for ${bursary.title}. Please review manually.`
       };
-      
       return {
         bursary,
         matchScore: fallbackScore
@@ -521,10 +434,10 @@ export async function getRecommendedBursaries(
     }
   });
   
-  // Wait for all matches to be calculated
   const matches = await Promise.all(matchPromises);
   
-  // Sort by match score (highest first)
-  // If AI is included and we want to sort by AI score, we could change this logic
-  return matches.sort((a, b) => b.matchScore.total - a.matchScore.total);
+  // Sort primarily by eligibility, then potentially by AI score if available?
+  // Or maybe keep sorting by eligibility only for a clear baseline?
+  // Let's stick to sorting by eligibilityScore for now.
+  return matches.sort((a, b) => b.matchScore.eligibilityScore - a.matchScore.eligibilityScore);
 } 

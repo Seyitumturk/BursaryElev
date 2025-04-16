@@ -49,11 +49,14 @@ export async function GET(req: NextRequest) {
         if (!userId) {
           console.log('No userId for "me" request, finding first student profile for development');
           // For development, just get the first student profile
-          studentProfile = await StudentProfile.findOne();
+          studentProfile = await StudentProfile.findOne().sort({ createdAt: -1 });
           
           if (!studentProfile) {
             return NextResponse.json({ error: 'No student profiles found' }, { status: 404 });
           }
+
+          console.log(`Found latest student profile for development: ${studentProfile._id}`);
+          console.log(`Profile data: Institution: ${studentProfile.institution}, Major: ${studentProfile.major}`);
         } else {
           const user = await User.findOne({ clerkId: userId });
           if (!user) {
@@ -61,6 +64,16 @@ export async function GET(req: NextRequest) {
           }
           
           studentProfile = await StudentProfile.findOne({ user: user._id });
+          
+          if (!studentProfile) {
+            // Try to find any profile if the user-specific one isn't found
+            console.log('User-specific profile not found, finding latest profile for development');
+            studentProfile = await StudentProfile.findOne().sort({ createdAt: -1 });
+            
+            if (!studentProfile) {
+              return NextResponse.json({ error: 'No student profiles found' }, { status: 404 });
+            }
+          }
         }
       } else {
         // Get by specific ID
@@ -72,9 +85,11 @@ export async function GET(req: NextRequest) {
       }
       
       console.log(`Found student profile: ${studentProfile._id}`);
+      console.log(`Using institution: ${studentProfile.institution}, major: ${studentProfile.major}`);
       
       // Generate summary
       const summary = await generateStudentSummary(studentProfile);
+      console.log("Generated AI summary:", summary.substring(0, 100) + "...");
       
       return NextResponse.json({ summary });
     } else {
@@ -86,10 +101,69 @@ export async function GET(req: NextRequest) {
       }
       
       console.log(`Found bursary: ${bursary._id}`);
+
+      // --- Caching Logic Start ---
+      const cacheMaxAgeDays = 7;
+      const badCacheString = "Mock response: Unrecognized prompt type. Claude would normally respond here."; // Define the bad string
+      let useCache = false;
+
+      if (
+        bursary.aiGeneratedSummary && 
+        bursary.aiGeneratedSummary !== badCacheString && // Explicitly check against the bad string
+        bursary.aiSummaryLastUpdated
+       ) {
+        const summaryAge = Date.now() - new Date(bursary.aiSummaryLastUpdated).getTime();
+        const maxAgeMillis = cacheMaxAgeDays * 24 * 60 * 60 * 1000;
+        if (summaryAge < maxAgeMillis) {
+          useCache = true; // Use cache only if not the bad string AND within age limit
+        }
+      }
       
+      if (useCache) {
+          console.log(`Using cached bursary summary for ${bursary._id} (generated ${bursary.aiSummaryLastUpdated!.toLocaleDateString()})`);
+          return NextResponse.json({ summary: bursary.aiGeneratedSummary });
+      } else if (bursary.aiGeneratedSummary === badCacheString) {
+          console.log(`Cached summary for ${bursary._id} is the bad fallback string. Forcing regeneration.`);
+      } else if (bursary.aiGeneratedSummary) {
+          console.log(`Cached summary for ${bursary._id} is older than ${cacheMaxAgeDays} days. Regenerating.`);
+      } else {
+           console.log(`No cached summary found for ${bursary._id}. Generating new summary...`);
+      }
+      // --- Caching Logic End ---
+
+      // Continue with generation logic only if cache wasn't used
+      console.log(`Generating new summary for ${bursary._id}...`);
       // Generate summary
-      const summary = await generateBursarySummary(bursary);
-      
+      let summary;
+      try {
+         summary = await generateBursarySummary(bursary);
+         
+         // Important: Check if the generated summary is actually an error message
+         if (summary && !summary.startsWith("Error generating AI summary")) {
+            console.log(`Successfully generated new summary for ${bursary._id}. Caching...`);
+            // Save the new summary back to the database
+            bursary.aiGeneratedSummary = summary;
+            bursary.aiSummaryLastUpdated = new Date();
+            await bursary.save();
+            console.log(`Cached summary saved successfully for ${bursary._id}.`);
+         } else if (summary && summary.startsWith("Error generating AI summary")) {
+            // Don't save the error message back to the cache
+            console.warn(`AI generation returned an error message for ${bursary._id}, not caching.`);
+         } else {
+            console.warn(`AI generation returned empty or null summary for ${bursary._id}, not caching.`);
+            // Return a generic error or the specific error message if needed
+            return NextResponse.json({ summary: "Failed to generate bursary summary at this time." }, { status: 500 });
+         }
+      } catch (generationError: any) {
+         console.error(`Error during generateBursarySummary call for ${bursary._id}:`, generationError);
+         // Return an error response if generation itself fails
+         return NextResponse.json(
+           { error: 'Failed to generate bursary summary', details: generationError.message },
+           { status: 500 }
+         );
+      }
+
+      // Return the newly generated (and possibly cached) summary
       return NextResponse.json({ summary });
     }
   } catch (error: any) {

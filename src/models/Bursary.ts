@@ -26,6 +26,9 @@ export interface IBursary extends Document {
     fileType: string;
     uploadDate: Date;
   }[];
+  // AI Summary Caching
+  aiGeneratedSummary?: string; // Added field for cached summary
+  aiSummaryLastUpdated?: Date; // Added field for summary timestamp
 }
 
 const BursarySchema: Schema = new Schema(
@@ -71,7 +74,10 @@ const BursarySchema: Schema = new Schema(
       fileName: { type: String },
       fileType: { type: String },
       uploadDate: { type: Date, default: Date.now }
-    }]
+    }],
+    // AI Summary Caching
+    aiGeneratedSummary: { type: String, required: false }, // Added field
+    aiSummaryLastUpdated: { type: Date, required: false } // Added field
   },
   { timestamps: true }
 );
