@@ -34,7 +34,10 @@ interface StudentFormData {
   bio: string;
   citizenship: string[];
   gender: string;
-  [key: string]: string | string[]; // Updated to handle arrays
+  identifiesAsIndigenous: boolean;
+  hasDisability: boolean;
+  gpa: string;
+  [key: string]: string | string[] | boolean; // Updated to handle arrays and booleans
 }
 
 export default function StudentOnboardingPage() {
@@ -65,6 +68,14 @@ export default function StudentOnboardingPage() {
       required: true,
       icon: <CalendarIcon className="h-6 w-6" />,
       description: "Expected year of graduation"
+    },
+    {
+      name: "gpa",
+      label: "GPA",
+      placeholder: "Enter your GPA (e.g., 3.7)",
+      required: false,
+      icon: <AcademicCapIcon className="h-6 w-6" />,
+      description: "Your current grade point average (helps match with merit-based opportunities)"
     },
     { 
       name: "interests", 
@@ -185,6 +196,24 @@ export default function StudentOnboardingPage() {
       icon: <UserCircleIcon className="h-6 w-6" />,
       description: "Your gender identity"
     },
+    { 
+      name: "identifiesAsIndigenous", 
+      label: "Self-identify as Indigenous", 
+      placeholder: "Select Yes or No", 
+      required: false, 
+      icon: <UserCircleIcon className="h-6 w-6" />,
+      description: "Do you self-identify as Indigenous (First Nations, Métis, Inuit)?",
+      isCheckbox: true
+    },
+    { 
+      name: "hasDisability", 
+      label: "Self-identify with a disability", 
+      placeholder: "Select Yes or No", 
+      required: false, 
+      icon: <UserCircleIcon className="h-6 w-6" />,
+      description: "Do you self-identify with a disability?",
+      isCheckbox: true
+    },
     { name: "review", label: "Review Your Information", icon: <PencilSquareIcon className="h-6 w-6" /> }
   ];
 
@@ -203,6 +232,9 @@ export default function StudentOnboardingPage() {
     bio: "",
     citizenship: [],
     gender: "",
+    identifiesAsIndigenous: false,
+    hasDisability: false,
+    gpa: "",
   });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -296,6 +328,9 @@ export default function StudentOnboardingPage() {
         graduationYear: formData.graduationYear ? parseInt(formData.graduationYear) : null,
         citizenship: Array.isArray(formData.citizenship) ? formData.citizenship : [],
         gender: formData.gender || "",
+        identifiesAsIndigenous: formData.identifiesAsIndigenous === true,
+        hasDisability: formData.hasDisability === true,
+        gpa: formData.gpa ? parseFloat(formData.gpa) : undefined,
       };
       
       console.log("Sanitized form data:", JSON.stringify(submissionData, null, 2));
@@ -393,6 +428,50 @@ export default function StudentOnboardingPage() {
               </button>
             ))}
           </div>
+          
+          {/* Custom input section */}
+          <div className="mt-4">
+            <p className="text-gray-500 dark:text-gray-400 text-sm mb-2">Add your own {currentField.label.toLowerCase()}:</p>
+            <div className="flex flex-wrap items-center gap-2 p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800">
+              {/* Display already added custom tags */}
+              {(formData[currentField.name] as string[]).filter(item => 
+                !currentField.options?.includes(item)
+              ).map((item, index) => (
+                <div 
+                  key={`custom-${index}`} 
+                  className="flex items-center gap-1.5 px-2.5 py-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-full text-sm"
+                >
+                  <span>{item}</span>
+                  <button
+                    type="button"
+                    onClick={() => handleMultiSelectToggle(currentField.name, item)}
+                    className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-200"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+              
+              {/* Input for new tags */}
+              <input
+                type="text"
+                className="flex-1 min-w-[150px] border-0 bg-transparent focus:ring-0 p-1 text-black dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
+                placeholder={`Type and press Tab or Enter to add...`}
+                onKeyDown={(e) => {
+                  if (e.key === 'Tab' || e.key === 'Enter') {
+                    e.preventDefault();
+                    const input = e.target as HTMLInputElement;
+                    const value = input.value.trim();
+                    if (value) {
+                      handleMultiSelectToggle(currentField.name, value);
+                      input.value = '';
+                    }
+                  }
+                }}
+              />
+            </div>
+          </div>
+          
           {error && <p className="text-red-500 dark:text-red-400 text-sm mt-2">{error}</p>}
         </div>
       );
@@ -444,6 +523,49 @@ export default function StudentOnboardingPage() {
           value={formData[currentField.name] as string[]}
           onChange={(newValue) => handleTagInputChange(currentField.name, newValue)}
         />
+      );
+    }
+
+    if (currentField.isCheckbox) {
+      return (
+        <div className="mb-4">
+          <div className="flex items-center gap-3 mb-2">
+            <span className="text-indigo-600 dark:text-indigo-400">{currentField.icon}</span>
+            <label
+              htmlFor={currentField.name}
+              className="block text-black dark:text-white font-medium"
+            >
+              {currentField.label}{" "}
+              {currentField.required && <span className="text-red-500 dark:text-red-400">*</span>}
+            </label>
+          </div>
+          <p className="text-gray-500 dark:text-gray-400 text-sm mb-3">{currentField.description}</p>
+          <div className="flex gap-4">
+            <button
+              type="button"
+              onClick={() => setFormData(prev => ({ ...prev, [currentField.name]: true }))}
+              className={`px-6 py-2 rounded-lg border text-center transition-all ${
+                formData[currentField.name] === true
+                  ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 dark:border-indigo-400"
+                  : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 dark:text-gray-300 hover:border-indigo-200 dark:hover:border-indigo-700"
+              }`}
+            >
+              Yes
+            </button>
+            <button
+              type="button"
+              onClick={() => setFormData(prev => ({ ...prev, [currentField.name]: false }))}
+              className={`px-6 py-2 rounded-lg border text-center transition-all ${
+                formData[currentField.name] === false
+                  ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 dark:border-indigo-400"
+                  : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 dark:text-gray-300 hover:border-indigo-200 dark:hover:border-indigo-700"
+              }`}
+            >
+              No
+            </button>
+          </div>
+          {error && <p className="text-red-500 dark:text-red-400 text-sm mt-2">{error}</p>}
+        </div>
       );
     }
 

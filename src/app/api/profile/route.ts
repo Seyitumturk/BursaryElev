@@ -87,6 +87,12 @@ export async function PUT(request: Request) {
         financialBackground: body.financialBackground || "",
         careerGoals: body.careerGoals || "",
         locationPreferences: Array.isArray(body.locationPreferences) ? body.locationPreferences : [],
+        citizenshipStatus: Array.isArray(body.citizenshipStatus) ? body.citizenshipStatus : [],
+        gender: body.gender || "",
+        identifiesAsIndigenous: body.identifiesAsIndigenous === true,
+        hasDisability: body.hasDisability === true,
+        ethnicity: Array.isArray(body.ethnicity) ? body.ethnicity : [],
+        gpa: typeof body.gpa === 'number' ? body.gpa : (body.gpa ? parseFloat(body.gpa) : undefined)
       };
       
       console.log("STUDENT PROFILE UPDATE DATA:", JSON.stringify(updateData, null, 2));

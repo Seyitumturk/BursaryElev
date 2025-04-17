@@ -33,7 +33,15 @@ import {
   QuestionMarkCircleIcon,
   SparklesIcon,
   InformationCircleIcon,
-  MapIcon // Added MapIcon
+  MapIcon,
+  ChevronDownIcon,
+  ArrowPathIcon,
+  XCircleIcon,
+  TrashIcon,
+  ArrowTopRightOnSquareIcon,
+  PencilSquareIcon,
+  CalendarDaysIcon,
+  ClipboardDocumentListIcon // Added new icons
 } from "@heroicons/react/24/outline";
 import { BookmarkIcon as BookmarkOutlineIcon } from "@heroicons/react/24/outline";
 import { BookmarkIcon as BookmarkSolidIcon } from "@heroicons/react/24/solid";
@@ -802,59 +810,67 @@ const formattedBursarySummary = (text: string) => {
 
 export default function BursariesPage() {
   const { isLoaded, userId } = useAuth();
-  const { user } = useUser();
-  const [search, setSearch] = useState("");
-  const [category, setCategory] = useState("all");
-  const [viewMode, setViewMode] = useState("card"); // Will add 'map' option
+  const router = useRouter();
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [selectedBursary, setSelectedBursary] = useState<Bursary | null>(null);
+  const [viewMode, setViewMode] = useState<"card" | "list" | "map">("card");
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [bursaries, setBursaries] = useState<Bursary[]>([]);
   const [filteredBursaries, setFilteredBursaries] = useState<Bursary[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [userRole, setUserRole] = useState<string | null>(null);
-  const [selectedBursary, setSelectedBursary] = useState<Bursary | null>(null);
-  const [isDetailOpen, setIsDetailOpen] = useState(false);
-  const [bookmarkedBursaries, setBookmarkedBursaries] = useState<string[]>([]);
+  const [search, setSearch] = useState("");
+  const [category, setCategory] = useState("all");
   const [filterOption, setFilterOption] = useState("all");
-  const [userOrgId, setUserOrgId] = useState<string | null>(null);
+  const [bookmarkedBursaries, setBookmarkedBursaries] = useState<string[]>([]);
   const [isAddBursaryModalOpen, setIsAddBursaryModalOpen] = useState(false);
   const [newlyAddedBursaryId, setNewlyAddedBursaryId] = useState<string | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
-  const [deleteSuccess, setDeleteSuccess] = useState<string | null>(null);
-  const router = useRouter();
   const [matches, setMatches] = useState<any[]>([]);
   const [matchesLoaded, setMatchesLoaded] = useState(false);
   const [bursarySummary, setBursarySummary] = useState<string | null>(null);
   const [summaryLoading, setSummaryLoading] = useState(false);
+  const [userProfile, setUserProfile] = useState<any>(null); // Add state for user profile
+  // Add state variables for delete functionality
+  const [deleteSuccess, setDeleteSuccess] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  // Add new state variables for additional filters
+  const [regionFilter, setRegionFilter] = useState("");
+  const [academicLevelFilter, setAcademicLevelFilter] = useState("all");
+  const [awardAmountFilter, setAwardAmountFilter] = useState("all");
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
   // Get user role and org ID from localStorage
+  const userRole = typeof window !== 'undefined' ? localStorage.getItem('userRole') || '' : '';
+  const userOrgId = typeof window !== 'undefined' ? localStorage.getItem('userOrgId') || '' : '';
+
+  // Load user profile data for field of study matching
+  useEffect(() => {
+    const loadUserProfile = async () => {
+      if (userId && userRole === 'student') {
+        try {
+          const response = await fetch('/api/profile/student');
+          if (response.ok) {
+            const data = await response.json();
+            setUserProfile(data);
+            console.log("Loaded student profile:", data);
+          }
+        } catch (error) {
+          console.error("Failed to load student profile:", error);
+        }
+      }
+    };
+
+    if (isLoaded && userId) {
+      loadUserProfile();
+    }
+  }, [isLoaded, userId, userRole]);
+
+  // Load bookmarked bursaries from localStorage
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const storedRole = localStorage.getItem('userRole');
-      setUserRole(storedRole);
-      
-      // Get bookmarked bursaries from localStorage
       const bookmarks = localStorage.getItem('bookmarkedBursaries');
       if (bookmarks) {
         setBookmarkedBursaries(JSON.parse(bookmarks));
-      }
-
-      // Get organization ID if user is an organization/funder
-      if (storedRole === 'organization' || storedRole === 'funder') {
-        const orgId = localStorage.getItem('userOrgId');
-        setUserOrgId(orgId);
-      }
-      
-      // Check for newly added bursary ID in sessionStorage (from create page)
-      const newBursaryId = sessionStorage.getItem('newlyAddedBursaryId');
-      if (newBursaryId) {
-        setNewlyAddedBursaryId(newBursaryId);
-        // Clear the session storage item
-        sessionStorage.removeItem('newlyAddedBursaryId');
-        // Reset the highlight after animation (6 seconds now)
-        setTimeout(() => {
-          setNewlyAddedBursaryId(null);
-        }, 6000);
       }
     }
   }, []);
@@ -917,71 +933,11 @@ export default function BursariesPage() {
     }
   };
 
-  // Filter bursaries based on search, category, and filter option
-  useEffect(() => {
-    if (!bursaries.length) return;
-    
-    let filtered = [...bursaries];
-    
-    // Filter by search term
-    if (search) {
-      const searchLower = search.toLowerCase();
-      filtered = filtered.filter(
-        b => 
-          (b.title?.toLowerCase() || '').includes(searchLower) ||
-          (b.description?.toLowerCase() || '').includes(searchLower) ||
-          (b.organization?.title?.toLowerCase() || '').includes(searchLower) ||
-          b.aiTags?.some(tag => tag && tag.toLowerCase().includes(searchLower)) ||
-          b.aiCategorization?.some(cat => cat && cat.toLowerCase().includes(searchLower))
-      );
-    }
-    
-    // Filter by category
-    if (category && category !== "all") {
-      filtered = filtered.filter(b => {
-        const fieldMatch = b.fieldOfStudy?.some(field => 
-          field && field.toLowerCase().includes(category.toLowerCase())
-        );
-        
-        const tagMatch = b.aiTags?.some(tag => 
-          tag && tag.toLowerCase().includes(category.toLowerCase())
-        );
-        
-        const catMatch = b.aiCategorization?.some(cat => 
-          cat && cat.toLowerCase().includes(category.toLowerCase())
-        );
-        
-        const levelMatch = category === "undergraduate" || category === "graduate" 
-          ? b.academicLevel?.some(level => 
-              level && level.toLowerCase().includes(category.toLowerCase())
-            )
-          : false;
-          
-        return fieldMatch || tagMatch || catMatch || levelMatch;
-      });
-    }
-
-    // Apply filter option (all, bookmarked, or my bursaries)
-    if (filterOption === 'bookmarked') {
-      filtered = filtered.filter(b => bookmarkedBursaries.includes(b._id));
-    } 
-    // For 'my-bursaries', the API already filters for organizations/funders
-    // This client-side filtering is a fallback in case the API filtering doesn't work
-    else if (filterOption === 'my-bursaries') {
-      // Only show bursaries created by the current user's organization
-      if (userOrgId) {
-        filtered = filtered.filter(b => b.organization._id === userOrgId);
-      }
-    }
-    
-    setFilteredBursaries(filtered);
-  }, [search, category, bursaries, filterOption, bookmarkedBursaries, userRole, userOrgId]);
-
   // Handle filter change
   const handleFilterChange = (option: string) => {
     console.log("Changing filter to:", option);
     setFilterOption(option);
-    // No need to manually filter here as the useEffect will handle refetching
+    // No need to manually filter here as the useEffect will handle refetching/filtering
   };
 
   const formatDate = (dateString: string) => {
@@ -1126,7 +1082,9 @@ export default function BursariesPage() {
 
   // Handle edit bursary - redirect to edit page or form
   const handleEditBursary = (e: React.MouseEvent, bursaryId: string) => {
-    e.stopPropagation();
+    e.stopPropagation(); // Prevent card click event
+    e.preventDefault(); // Prevent default link behavior
+    
     // Use router.push instead of window.location for better Next.js integration
     // The route format should follow your app's structure
     router.push(`/dashboard/bursaries/${bursaryId}/edit`);
@@ -1326,6 +1284,109 @@ export default function BursariesPage() {
     }
   };
 
+  // Apply filters
+  useEffect(() => {
+    if (!bursaries.length) return;
+
+    let filtered = [...bursaries];
+
+    // Apply search filter
+    if (search) {
+      const searchLower = search.toLowerCase();
+      filtered = filtered.filter(
+        (b) =>
+          b.title.toLowerCase().includes(searchLower) ||
+          b.description.toLowerCase().includes(searchLower) ||
+          b.aiTags?.some(tag => tag.toLowerCase().includes(searchLower)) ||
+          b.fieldOfStudy?.some(field => field.toLowerCase().includes(searchLower)) ||
+          // Add search on location field
+          (b.location && b.location.toLowerCase().includes(searchLower))
+      );
+    }
+
+    // Apply region filter
+    if (regionFilter) {
+      filtered = filtered.filter(
+        (b) => b.location && b.location.toLowerCase().includes(regionFilter.toLowerCase())
+      );
+    }
+
+    // Apply category filter
+    if (category !== "all") {
+      // Check for direct category match
+      filtered = filtered.filter(
+        (b) =>
+          b.aiCategorization?.includes(category) ||
+          b.fieldOfStudy?.some(field => field.toLowerCase().includes(category.toLowerCase()))
+      );
+    }
+
+    // Apply academic level filter
+    if (academicLevelFilter !== "all") {
+      filtered = filtered.filter(
+        (b) => b.academicLevel?.includes(academicLevelFilter)
+      );
+    }
+
+    // Apply award amount filter
+    if (awardAmountFilter !== "all") {
+      switch (awardAmountFilter) {
+        case "under1000":
+          filtered = filtered.filter(b => b.awardAmount < 1000);
+          break;
+        case "1000to5000":
+          filtered = filtered.filter(b => b.awardAmount >= 1000 && b.awardAmount <= 5000);
+          break;
+        case "5000to10000":
+          filtered = filtered.filter(b => b.awardAmount > 5000 && b.awardAmount <= 10000);
+          break;
+        case "over10000":
+          filtered = filtered.filter(b => b.awardAmount > 10000);
+          break;
+      }
+    }
+
+    // Auto-filter by student's field of study (major) if student is logged in
+    // Only apply this auto-filter if no other category filter is selected
+    if (userProfile && userRole === 'student' && category === 'all') {
+      const studentMajor = userProfile.major?.toLowerCase();
+      if (studentMajor) {
+        // Find bursaries that match the student's major or are related fields
+        const fieldMatches = filtered.filter(b => 
+          b.fieldOfStudy?.some(field => 
+            field.toLowerCase().includes(studentMajor) || 
+            studentMajor.includes(field.toLowerCase())
+          )
+        );
+        
+        // If we have matches, prioritize them at the top
+        if (fieldMatches.length > 0) {
+          const nonMatches = filtered.filter(b => 
+            !b.fieldOfStudy?.some(field => 
+              field.toLowerCase().includes(studentMajor) || 
+              studentMajor.includes(field.toLowerCase())
+            )
+          );
+          filtered = [...fieldMatches, ...nonMatches];
+        }
+      }
+    }
+
+    // Apply filter option (all, bookmarked, or my bursaries)
+    if (filterOption === 'bookmarked') {
+      filtered = filtered.filter(b => bookmarkedBursaries.includes(b._id));
+    } 
+    // For 'my-bursaries', the API already filters for organizations/funders
+    else if (filterOption === 'my-bursaries') {
+      // Only show bursaries created by the current user's organization
+      if (userOrgId) {
+        filtered = filtered.filter(b => b.organization._id === userOrgId);
+      }
+    }
+    
+    setFilteredBursaries(filtered);
+  }, [search, category, regionFilter, academicLevelFilter, awardAmountFilter, bursaries, filterOption, bookmarkedBursaries, userRole, userOrgId, userProfile]);
+
   return (
     <div className="flex flex-col h-[calc(100vh-160px)] overflow-hidden gap-6 w-full">
       {/* Custom scrollbar styles */}
@@ -1467,7 +1528,43 @@ export default function BursariesPage() {
             />
           </div>
           
+          {/* Region filter dropdown */}
+          <div className="relative w-full sm:w-auto">
+            <select
+              value={regionFilter}
+              onChange={(e) => setRegionFilter(e.target.value)}
+              className="w-full px-4 py-2.5 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 appearance-none pr-8"
+            >
+              <option value="">All Regions</option>
+              <option value="Canada">Canada</option>
+              <option value="International">International</option>
+              <option value="USA">USA</option>
+              <option value="Alberta">Alberta</option>
+              <option value="British Columbia">British Columbia</option>
+              <option value="Manitoba">Manitoba</option>
+              <option value="New Brunswick">New Brunswick</option>
+              <option value="Newfoundland">Newfoundland</option>
+              <option value="Nova Scotia">Nova Scotia</option>
+              <option value="Ontario">Ontario</option>
+              <option value="Prince Edward Island">PEI</option>
+              <option value="Quebec">Quebec</option>
+              <option value="Saskatchewan">Saskatchewan</option>
+            </select>
+            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+              <ChevronDownIcon className="h-5 w-5 text-gray-400" />
+            </div>
+          </div>
+          
           <div className="flex items-center gap-3">
+            {/* Advanced filters toggle */}
+            <button
+              onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+              className="px-3 py-2 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl shadow-sm flex items-center gap-1 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition-all"
+            >
+              <AdjustmentsHorizontalIcon className="h-5 w-5" />
+              <span className="hidden sm:inline">Filters</span>
+            </button>
+            
             {/* Bookmark filter button */}
             <button
               onClick={() => handleFilterChange(filterOption === 'bookmarked' ? 'all' : 'bookmarked')}
@@ -1487,9 +1584,6 @@ export default function BursariesPage() {
             
             {/* View mode toggle with icons */}
             <div className="flex items-center space-x-4">
-              {/* Search Input */}
-              {/* ... */}
-              
               {/* View Mode Toggle Buttons */}
               <div className="flex items-center gap-2 bg-white dark:bg-gray-800 p-1 rounded-lg shadow-sm">
                 <button
@@ -1514,7 +1608,7 @@ export default function BursariesPage() {
                 >
                   <Bars3Icon className="h-5 w-5" />
                 </button>
-                 <button // <-- Add Map View Button
+                 <button
                   onClick={() => setViewMode("map")}
                   className={`p-2 rounded-lg transition-colors ${
                     viewMode === "map"
@@ -1529,6 +1623,63 @@ export default function BursariesPage() {
             </div>
           </div>
         </div>
+        
+        {/* Advanced Filters Panel */}
+        {showAdvancedFilters && (
+          <div className="mt-4 p-4 bg-white/90 dark:bg-gray-800/90 rounded-xl border border-gray-200 dark:border-gray-700 backdrop-blur-sm">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              {/* Academic Level Filter */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Academic Level</label>
+                <select
+                  value={academicLevelFilter}
+                  onChange={(e) => setAcademicLevelFilter(e.target.value)}
+                  className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                >
+                  <option value="all">All Levels</option>
+                  <option value="undergraduate">Undergraduate</option>
+                  <option value="graduate">Graduate</option>
+                  <option value="postgraduate">Post-Graduate</option>
+                  <option value="highschool">High School</option>
+                  <option value="doctorate">Doctorate</option>
+                </select>
+              </div>
+              
+              {/* Award Amount Filter */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Award Amount</label>
+                <select
+                  value={awardAmountFilter}
+                  onChange={(e) => setAwardAmountFilter(e.target.value)}
+                  className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                >
+                  <option value="all">Any Amount</option>
+                  <option value="under1000">Under $1,000</option>
+                  <option value="1000to5000">$1,000 - $5,000</option>
+                  <option value="5000to10000">$5,000 - $10,000</option>
+                  <option value="over10000">Over $10,000</option>
+                </select>
+              </div>
+              
+              {/* Reset Filters Button */}
+              <div className="flex items-end">
+                <button
+                  onClick={() => {
+                    setSearch("");
+                    setCategory("all");
+                    setRegionFilter("");
+                    setAcademicLevelFilter("all");
+                    setAwardAmountFilter("all");
+                  }}
+                  className="px-4 py-2 text-sm text-purple-600 hover:text-purple-800 dark:text-purple-400 dark:hover:text-purple-300 border border-purple-200 dark:border-purple-700 rounded-lg hover:bg-purple-50 dark:hover:bg-purple-900/30 transition-colors flex items-center gap-1"
+                >
+                  <ArrowPathIcon className="h-4 w-4" />
+                  Reset All Filters
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         
         {/* Category filter tags */}
         <div className="flex flex-wrap gap-2 mt-4 mb-6">

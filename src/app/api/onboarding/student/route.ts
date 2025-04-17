@@ -38,21 +38,24 @@ export async function POST(request: Request) {
     const body = await request.json();
     console.log("[Student Onboarding] Student onboarding data received:", JSON.stringify(body, null, 2));
     
-    // Extract all fields with strong typing
+    // Destructure fields (with good defaults)
     const { 
-      institution, 
-      major, 
-      graduationYear, 
-      interests, 
-      bio,
-      skills,
-      languages,
-      achievements,
-      financialBackground,
-      careerGoals,
-      locationPreferences,
-      citizenship,
-      gender
+      institution = "", 
+      major = "", 
+      graduationYear = null, 
+      interests = [], 
+      skills = [], 
+      languages = [], 
+      achievements = [], 
+      financialBackground = "", 
+      careerGoals = "", 
+      locationPreferences = [],
+      bio = "",
+      citizenship = [],
+      gender = "",
+      identifiesAsIndigenous = false,
+      hasDisability = false,
+      gpa = null
     } = body;
 
     console.log("[Student Onboarding] Extracted fields:");
@@ -64,6 +67,9 @@ export async function POST(request: Request) {
     console.log("[Student Onboarding] locationPreferences:", locationPreferences);
     console.log("[Student Onboarding] citizenship:", citizenship);
     console.log("[Student Onboarding] gender:", gender);
+    console.log("[Student Onboarding] identifiesAsIndigenous:", identifiesAsIndigenous);
+    console.log("[Student Onboarding] hasDisability:", hasDisability);
+    console.log("[Student Onboarding] gpa:", gpa);
 
     // Find existing user first
     console.log(`[Student Onboarding] Looking for existing user with clerkId: ${userId}`);
@@ -100,7 +106,10 @@ export async function POST(request: Request) {
       careerGoals: careerGoals || "",
       locationPreferences: Array.isArray(locationPreferences) ? locationPreferences : [],
       citizenship: Array.isArray(citizenship) ? citizenship : [],
-      gender: gender || ""
+      gender: gender || "",
+      identifiesAsIndigenous: identifiesAsIndigenous,
+      hasDisability: hasDisability,
+      gpa: typeof gpa === 'number' ? gpa : (gpa ? parseFloat(gpa) : undefined)
     };
 
     console.log("[Student Onboarding] Profile data to save:", JSON.stringify(profileData, null, 2));
