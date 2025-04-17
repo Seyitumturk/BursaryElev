@@ -5,6 +5,7 @@ export interface IStudentProfile extends Document {
   institution: string;
   major: string;
   graduationYear: number;
+  gpa?: number;
   interests?: string[];
   bio?: string;
   skills?: string[];
@@ -13,6 +14,11 @@ export interface IStudentProfile extends Document {
   financialBackground?: string;
   careerGoals?: string;
   locationPreferences?: string[];
+  citizenshipStatus?: string[];
+  gender?: string;
+  identifiesAsIndigenous?: boolean;
+  hasDisability?: boolean;
+  ethnicity?: string[];
 }
 
 const StudentProfileSchema: Schema = new Schema(
@@ -21,6 +27,7 @@ const StudentProfileSchema: Schema = new Schema(
     institution: { type: String, required: true },
     major: { type: String, required: true },
     graduationYear: { type: Number, required: true },
+    gpa: { type: Number, required: false },
     interests: { type: [String], default: [] },
     bio: { type: String, default: "" },
     skills: { type: [String], default: [] },
@@ -29,6 +36,11 @@ const StudentProfileSchema: Schema = new Schema(
     financialBackground: { type: String, default: "" },
     careerGoals: { type: String, default: "" },
     locationPreferences: { type: [String], default: [] },
+    citizenshipStatus: { type: [String], default: [] },
+    gender: { type: String, default: "" },
+    identifiesAsIndigenous: { type: Boolean, default: false },
+    hasDisability: { type: Boolean, default: false },
+    ethnicity: { type: [String], default: [] },
   },
   { 
     timestamps: true,

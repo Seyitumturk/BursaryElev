@@ -302,25 +302,25 @@ export default function BursaryMatches({ showMatches = true, limit = 3 }: Bursar
                 
                 <h4 className="font-medium text-blue-800 dark:text-blue-300 mb-2 flex items-center">
                   <QuestionMarkCircleIcon className="w-5 h-5 mr-1" />
-                  Why We Matched You
+                  Eligibility Summary
                 </h4>
                 
-                {/* Conversational explanation */}
+                {/* Conversational explanation (Now focused on Eligibility) */}
                 <div className="mb-4 p-3 bg-white dark:bg-blue-900/30 rounded-lg border border-blue-100 dark:border-blue-800/30">
-                  <p className="text-gray-700 dark:text-gray-200 italic">
+                  <p className="text-gray-700 dark:text-gray-200 italic whitespace-pre-wrap">
                     {match.matchScore.conversationalExplanation}
                   </p>
                 </div>
-                
-                {/* Show AI explanation if available */}
+
+                {/* Re-introduced AI Recommendation section */}
                 {useAIMatching && match.matchScore.aiMatchExplanation && (
                   <div className="mb-4">
                     <h4 className="font-medium text-purple-800 dark:text-purple-300 mb-2 flex items-center">
                       <SparklesIcon className="w-5 h-5 mr-1" />
-                      AI Match Reasoning
+                      AI Recommendation
                     </h4>
-                    <div className="p-3 bg-white dark:bg-purple-900/30 rounded-lg border border-purple-100 dark:border-purple-800/30">
-                      <p className="text-gray-700 dark:text-gray-200 italic">
+                    <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-100 dark:border-purple-800/30">
+                      <p className="text-gray-700 dark:text-gray-300 italic">
                         {match.matchScore.aiMatchExplanation}
                       </p>
                     </div>

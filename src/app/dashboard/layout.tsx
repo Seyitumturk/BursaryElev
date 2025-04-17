@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
 import Sidebar from "../../components/Sidebar";
 import Header from "../../components/Header";
-import { ChartBarIcon } from "@heroicons/react/24/outline";
+import { ChartBarIcon, GlobeAltIcon } from "@heroicons/react/24/outline";
 
 export default function DashboardLayout({
   children,
@@ -63,6 +63,11 @@ export default function DashboardLayout({
   // Base links for navigation sidebar
   const dashboardLinks = [
     { href: "/dashboard/bursaries", label: "Bursaries" },
+    { 
+      href: "/dashboard/opportunities", 
+      label: "Opportunities",
+      icon: <GlobeAltIcon className="h-6 w-6" />
+    },
     { href: "/dashboard/profile", label: "Profile" },
   ];
   

@@ -1,7 +1,8 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import dynamic from 'next/dynamic'; // Added
 import { 
   MagnifyingGlassIcon, 
   AdjustmentsHorizontalIcon, 
@@ -30,12 +31,21 @@ import {
   AcademicCapIcon,
   GlobeAltIcon,
   QuestionMarkCircleIcon,
-  SparklesIcon
+  SparklesIcon,
+  InformationCircleIcon,
+  MapIcon // Added MapIcon
 } from "@heroicons/react/24/outline";
 import { BookmarkIcon as BookmarkOutlineIcon } from "@heroicons/react/24/outline";
 import { BookmarkIcon as BookmarkSolidIcon } from "@heroicons/react/24/solid";
 import { useAuth, useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
+import TagInput from "@/components/TagInput"; // Import the new component
+
+// Dynamically import BursaryMap with ssr: false
+const BursaryMap = dynamic(() => import('@/components/BursaryMap'), {
+  ssr: false,
+  loading: () => <div className="flex justify-center items-center h-[500px]"><p>Loading map...</p></div> // Optional loading state
+});
 
 interface Bursary {
   _id: string;
@@ -48,6 +58,7 @@ interface Bursary {
   academicLevel: string[];
   financialNeedLevel: string;
   requiredDocuments: string[];
+  location?: string; // <-- Add location field here
   aiTags: string[];
   aiCategorization: string[];
   competitionLevel: string;
@@ -90,9 +101,10 @@ function AddBursaryModal({
     deadline: "",
     awardAmount: "",
     eligibilityCriteria: "",
-    fieldOfStudy: [] as string[],
-    academicLevel: [] as string[],
+    fieldOfStudy: [] as string[], // Changed back to array
+    academicLevel: [] as string[], // Changed back to array
     financialNeedLevel: "medium",
+    location: "", // Added location state
   });
   
   const [currentStep, setCurrentStep] = useState(1);
@@ -102,56 +114,13 @@ function AddBursaryModal({
   const [success, setSuccess] = useState<string | null>(null);
   const [isFadingOut, setIsFadingOut] = useState(false);
   
-  // Handle input changes
+  // Handle input changes (works for new text inputs too)
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
       [name]: value
     }));
-  };
-  
-  // Handle multi-select changes
-  const handleMultiSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const { name } = e.target;
-    const selectedOptions = Array.from(e.target.selectedOptions).map(option => option.value);
-    
-    setFormData(prev => ({
-      ...prev,
-      [name]: selectedOptions
-    }));
-  };
-  
-  // Handle field of study selection (replacing dropdown)
-  const toggleFieldOfStudy = (field: string) => {
-    setFormData(prev => {
-      if (prev.fieldOfStudy.includes(field)) {
-        return {
-          ...prev,
-          fieldOfStudy: prev.fieldOfStudy.filter(f => f !== field)
-        };
-      } else {
-        return {
-          ...prev,
-          fieldOfStudy: [...prev.fieldOfStudy, field]
-        };
-      }
-    });
-  };
-  
-  // Handle checkbox changes for academic levels
-  const handleCheckboxChange = (level: string, checked: boolean) => {
-    if (checked) {
-      setFormData(prev => ({
-        ...prev,
-        academicLevel: [...prev.academicLevel, level]
-      }));
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        academicLevel: prev.academicLevel.filter(l => l !== level)
-      }));
-    }
   };
   
   // Handle navigation between steps
@@ -167,6 +136,11 @@ function AddBursaryModal({
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
     }
+  };
+  
+  // Add handler for TagInput
+  const handleTagInputChange = (field: string, value: string[]) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
   
   // Handle form submission
@@ -186,7 +160,7 @@ function AddBursaryModal({
       if (!formData.deadline) throw new Error("Deadline is required");
       if (!formData.awardAmount) throw new Error("Award amount is required");
       
-      // Format data
+      // Format data - Use arrays directly from state
       const bursaryData = {
         title: formData.title,
         description: formData.description,
@@ -194,9 +168,10 @@ function AddBursaryModal({
         applicationUrl: formData.applicationUrl,
         deadline: new Date(formData.deadline).toISOString(),
         awardAmount: parseFloat(formData.awardAmount) || 0,
-        fieldOfStudy: formData.fieldOfStudy.length > 0 ? formData.fieldOfStudy : ["Other"],
-        academicLevel: formData.academicLevel.length > 0 ? formData.academicLevel : ["undergraduate"],
+        fieldOfStudy: Array.isArray(formData.fieldOfStudy) && formData.fieldOfStudy.length > 0 ? formData.fieldOfStudy : ["Other"],
+        academicLevel: Array.isArray(formData.academicLevel) && formData.academicLevel.length > 0 ? formData.academicLevel : ["undergraduate"],
         financialNeedLevel: formData.financialNeedLevel,
+        location: formData.location, // Added location data
         documents: [],
       };
       
@@ -258,6 +233,7 @@ function AddBursaryModal({
         fieldOfStudy: [],
         academicLevel: [],
         financialNeedLevel: "medium",
+        location: "", // Reset location state
       });
       
       // Start the fade-out animation
@@ -523,75 +499,161 @@ function AddBursaryModal({
                 </div>
                 
                 <div className="space-y-5">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Field of Study</label>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                      {[
-                        "Engineering", "Computer Science", "Business", "Medicine", "Law", 
-                        "Arts", "Humanities", "Social Sciences", "Natural Sciences", "Education",
-                        "Mathematics", "Other"
-                      ].map(field => (
-                        <button
-                          key={field}
-                          type="button"
-                          onClick={() => toggleFieldOfStudy(field)}
-                          className={`flex items-center p-2 rounded-lg border ${
-                            formData.fieldOfStudy.includes(field)
-                              ? 'bg-[#e3dacc] dark:bg-[#5b3d2e] border-[#c33c33] dark:border-[#d2ac8b] text-[#c33c33] dark:text-[#d2ac8b]'
-                              : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:border-purple-300 dark:hover:border-purple-700'
-                          }`}
-                        >
-                          {formData.fieldOfStudy.includes(field) ? 
-                            <CheckCircleIcon className="h-5 w-5 mr-1.5" /> : 
-                            <div className="h-5 w-5 mr-1.5 rounded-full border-2 border-gray-400 dark:border-gray-500"></div>
-                          }
-                          <span className="text-sm">{field}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+                  {/* Field of Study Tag Input */}
+                  <TagInput 
+                    label="Field(s) of Study"
+                    description="Enter required fields and press Enter/Tab (e.g., Engineering, Any)"
+                    icon={<BookOpenIcon className="h-5 w-5" />}
+                    placeholder="Type field and press Enter..."
+                    value={formData.fieldOfStudy}
+                    onChange={(newValue) => handleTagInputChange('fieldOfStudy', newValue)}
+                  />
                   
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Academic Level</label>
-                    <div className="grid grid-cols-2 gap-3">
-                      {[
-                        { id: "undergraduate", label: "Undergraduate" },
-                        { id: "graduate", label: "Graduate" },
-                        { id: "phd", label: "PhD" },
-                        { id: "postdoctoral", label: "Postdoctoral" }
-                      ].map(level => (
-                        <button
-                          key={level.id}
-                          type="button"
-                          onClick={() => handleCheckboxChange(level.id, !formData.academicLevel.includes(level.id))}
-                          className={`flex items-center p-3 rounded-lg border ${
-                            formData.academicLevel.includes(level.id)
-                              ? 'bg-[#e3dacc] dark:bg-[#5b3d2e] border-[#c33c33] dark:border-[#d2ac8b] text-[#c33c33] dark:text-[#d2ac8b]'
-                              : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:border-purple-300 dark:hover:border-purple-700'
-                          }`}
-                        >
-                          {formData.academicLevel.includes(level.id) ? 
-                            <CheckCircleIcon className="h-5 w-5 mr-2" /> : 
-                            <div className="h-5 w-5 mr-2 rounded-full border-2 border-gray-400 dark:border-gray-500"></div>
-                          }
-                          <span>{level.label}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+                  {/* Academic Level Tag Input */}
+                   <TagInput 
+                    label="Academic Level(s)"
+                    description="Enter required levels and press Enter/Tab (e.g., Undergraduate, Any)"
+                    icon={<AcademicCapIcon className="h-5 w-5" />}
+                    placeholder="Type level and press Enter..."
+                    value={formData.academicLevel}
+                    onChange={(newValue) => handleTagInputChange('academicLevel', newValue)}
+                  />
                   
+                  {/* Location Input - Changed to Dropdown */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Eligibility Criteria</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Location</label>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Select the primary location or region for this bursary.</p>
                     <div className="relative">
-                      <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500 dark:text-gray-400">
-                        <ClipboardDocumentCheckIcon className="h-5 w-5" />
+                       <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-500 dark:text-gray-400"> {/* Added pointer-events-none */}
+                        <GlobeAltIcon className="h-5 w-5" />
                       </span>
-                      <textarea 
+                      <select
+                        name="location"
+                        value={formData.location}
+                        onChange={handleChange}
+                        className="w-full pl-10 pr-8 py-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#c33c33] dark:focus:ring-[#d2ac8b] text-gray-800 dark:text-white appearance-none" // Added appearance-none
+                      >
+                        <option value="">Select Location...</option>
+                        {/* Broadest Options */}
+                        <option value="International">International</option>
+                        <option value="Canada-wide">Canada-wide</option>
+                        <option value="USA-wide">USA-wide</option>
+                        <option value="North America">North America</option>
+
+                        {/* Canadian Regions */}
+                        <optgroup label="Canadian Regions">
+                          <option value="Atlantic Canada">Atlantic Canada (NB, NL, NS, PE)</option>
+                          <option value="Quebec">Quebec</option>
+                          <option value="Ontario">Ontario</option>
+                          <option value="Prairies">Prairies (AB, MB, SK)</option>
+                          <option value="British Columbia">British Columbia</option>
+                          <option value="Canadian North">Canadian North (NT, NU, YT)</option>
+                        </optgroup>
+
+                        {/* US Regions */}
+                         <optgroup label="US Regions">
+                          <option value="US Northeast">US Northeast</option>
+                          <option value="US South">US South</option>
+                          <option value="US Midwest">US Midwest</option>
+                          <option value="US West">US West</option>
+                        </optgroup>
+
+                        {/* Specific Provinces/Territories */}
+                        <optgroup label="Canadian Provinces/Territories">
+                          <option value="Alberta">Alberta</option>
+                          <option value="British Columbia">British Columbia</option>
+                          <option value="Manitoba">Manitoba</option>
+                          <option value="New Brunswick">New Brunswick</option>
+                          <option value="Newfoundland and Labrador">Newfoundland and Labrador</option>
+                          <option value="Nova Scotia">Nova Scotia</option>
+                          <option value="Ontario">Ontario</option>
+                          <option value="Prince Edward Island">Prince Edward Island</option>
+                          <option value="Quebec">Quebec</option>
+                          <option value="Saskatchewan">Saskatchewan</option>
+                          <option value="Northwest Territories">Northwest Territories</option>
+                          <option value="Nunavut">Nunavut</option>
+                          <option value="Yukon">Yukon</option>
+                        </optgroup>
+
+                         {/* Removed Major Canadian Cities */}
+
+                        {/* Specific US States */}
+                        <optgroup label="US States">
+                          <option value="Alabama">Alabama</option>
+                          <option value="Alaska">Alaska</option>
+                          <option value="Arizona">Arizona</option>
+                          <option value="Arkansas">Arkansas</option>
+                          <option value="California">California</option>
+                          <option value="Colorado">Colorado</option>
+                          <option value="Connecticut">Connecticut</option>
+                          <option value="Delaware">Delaware</option>
+                          <option value="Florida">Florida</option>
+                          <option value="Georgia">Georgia</option>
+                          <option value="Hawaii">Hawaii</option>
+                          <option value="Idaho">Idaho</option>
+                          <option value="Illinois">Illinois</option>
+                          <option value="Indiana">Indiana</option>
+                          <option value="Iowa">Iowa</option>
+                          <option value="Kansas">Kansas</option>
+                          <option value="Kentucky">Kentucky</option>
+                          <option value="Louisiana">Louisiana</option>
+                          <option value="Maine">Maine</option>
+                          <option value="Maryland">Maryland</option>
+                          <option value="Massachusetts">Massachusetts</option>
+                          <option value="Michigan">Michigan</option>
+                          <option value="Minnesota">Minnesota</option>
+                          <option value="Mississippi">Mississippi</option>
+                          <option value="Missouri">Missouri</option>
+                          <option value="Montana">Montana</option>
+                          <option value="Nebraska">Nebraska</option>
+                          <option value="Nevada">Nevada</option>
+                          <option value="New Hampshire">New Hampshire</option>
+                          <option value="New Jersey">New Jersey</option>
+                          <option value="New Mexico">New Mexico</option>
+                          <option value="New York">New York</option>
+                          <option value="North Carolina">North Carolina</option>
+                          <option value="North Dakota">North Dakota</option>
+                          <option value="Ohio">Ohio</option>
+                          <option value="Oklahoma">Oklahoma</option>
+                          <option value="Oregon">Oregon</option>
+                          <option value="Pennsylvania">Pennsylvania</option>
+                          <option value="Rhode Island">Rhode Island</option>
+                          <option value="South Carolina">South Carolina</option>
+                          <option value="South Dakota">South Dakota</option>
+                          <option value="Tennessee">Tennessee</option>
+                          <option value="Texas">Texas</option>
+                          <option value="Utah">Utah</option>
+                          <option value="Vermont">Vermont</option>
+                          <option value="Virginia">Virginia</option>
+                          <option value="Washington">Washington</option>
+                          <option value="West Virginia">West Virginia</option>
+                          <option value="Wisconsin">Wisconsin</option>
+                          <option value="Wyoming">Wyoming</option>
+                          <option value="District of Columbia">District of Columbia</option>
+                        </optgroup>
+                         {/* Removed Major US Cities */}
+                      </select>
+                       {/* Dropdown Arrow */}
+                       <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                         <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                           <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                         </svg>
+                       </div>
+                    </div>
+                  </div>
+                  
+                  {/* Eligibility Criteria Textarea (remains the same) */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Additional Eligibility Criteria</label>
+                     <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Enter any other specific requirements (e.g., specific citizenship, region, demographic group).</p>
+                    <div className="relative">
+                      {/* ... existing textarea for eligibilityCriteria ... */}
+                       <textarea 
                         rows={3} 
                         name="eligibilityCriteria"
                         value={formData.eligibilityCriteria}
                         onChange={handleChange}
-                        placeholder="Any additional eligibility criteria..." 
+                        placeholder="Any additional eligibility criteria..."
                         className="w-full pl-10 px-4 py-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#c33c33] dark:focus:ring-[#d2ac8b] text-gray-800 dark:text-white"
                       ></textarea>
                     </div>
@@ -699,12 +761,51 @@ const globalStyles = `
   }
 `;
 
+// Helper function to format AI summary text (similar to profile page)
+const formattedBursarySummary = (text: string) => {
+  if (!text) return <p className="text-gray-500 dark:text-gray-400 italic">No summary available.</p>;
+
+  // Split by double newlines first, then single if no double exist
+  let sections = text.split('\\n\\n');
+  if (sections.length <= 1) {
+    sections = text.split('\\n');
+  }
+
+  return (
+    <div className="formatted-summary space-y-3 leading-relaxed">
+      {sections.map((section, idx) => {
+        const trimmedSection = section.trim();
+        if (!trimmedSection) return null;
+
+        // Basic check for potential list items (start with -, *, or number.)
+        if (trimmedSection.match(/^(-\s|\*\s|\d+\.\s)/)) {
+          // Attempt to split into list items
+          const items = trimmedSection.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+          return (
+            <ul key={idx} className="list-disc list-outside pl-5 space-y-1 text-gray-700 dark:text-gray-300">
+              {items.map((item, i) => (
+                <li key={i}>{item.replace(/^(-\s|\*\s|\d+\.\s)/, '')}</li> // Remove bullet/number prefix
+              ))}
+            </ul>
+          );
+        } else if (trimmedSection.endsWith(':')) {
+          // Treat lines ending with a colon as headings
+          return <h4 key={idx} className="font-semibold text-gray-800 dark:text-gray-200 mt-2">{trimmedSection}</h4>;
+        } else {
+          // Regular paragraph
+          return <p key={idx} className="text-gray-700 dark:text-gray-300">{trimmedSection}</p>;
+        }
+      })}
+    </div>
+  );
+};
+
 export default function BursariesPage() {
   const { isLoaded, userId } = useAuth();
   const { user } = useUser();
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
-  const [viewMode, setViewMode] = useState("card");
+  const [viewMode, setViewMode] = useState("card"); // Will add 'map' option
   const [loading, setLoading] = useState(true);
   const [bursaries, setBursaries] = useState<Bursary[]>([]);
   const [filteredBursaries, setFilteredBursaries] = useState<Bursary[]>([]);
@@ -1200,6 +1301,9 @@ export default function BursariesPage() {
       
       const data = await response.json();
       
+      // DEBUG: Log the raw summary received from the API
+      console.log(`[DEBUG] Raw summary received for bursary ${bursaryId}:`, data.summary);
+      
       if (data && data.summary) {
         // Check if the summary is actually an error message from the backend
         if (data.summary.startsWith("Error generating AI summary")) {
@@ -1382,21 +1486,46 @@ export default function BursariesPage() {
             </button>
             
             {/* View mode toggle with icons */}
-            <div className="flex bg-white dark:bg-gray-700 p-1 rounded-xl shadow-sm border border-purple-200 dark:border-purple-800/40">
-              <button
-                onClick={() => setViewMode("card")}
-                className={`p-1.5 rounded-lg ${viewMode === "card" ? "bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400" : "text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400"}`}
-                aria-label="Card View"
-              >
-                <Squares2X2Icon className="h-5 w-5" />
-              </button>
-              <button
-                onClick={() => setViewMode("list")}
-                className={`p-1.5 rounded-lg ${viewMode === "list" ? "bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400" : "text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400"}`}
-                aria-label="List View"
-              >
-                <ListBulletIcon className="h-5 w-5" />
-              </button>
+            <div className="flex items-center space-x-4">
+              {/* Search Input */}
+              {/* ... */}
+              
+              {/* View Mode Toggle Buttons */}
+              <div className="flex items-center gap-2 bg-white dark:bg-gray-800 p-1 rounded-lg shadow-sm">
+                <button
+                  onClick={() => setViewMode("card")}
+                  className={`p-2 rounded-lg transition-colors ${
+                    viewMode === "card"
+                      ? "bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300"
+                      : "text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+                  }`}
+                  title="Card View"
+                >
+                  <Squares2X2Icon className="h-5 w-5" />
+                </button>
+                <button
+                  onClick={() => setViewMode("list")}
+                  className={`p-2 rounded-lg transition-colors ${
+                    viewMode === "list"
+                      ? "bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300"
+                      : "text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+                  }`}
+                  title="List View"
+                >
+                  <Bars3Icon className="h-5 w-5" />
+                </button>
+                 <button // <-- Add Map View Button
+                  onClick={() => setViewMode("map")}
+                  className={`p-2 rounded-lg transition-colors ${
+                    viewMode === "map"
+                      ? "bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300"
+                      : "text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+                  }`}
+                  title="Map View"
+                >
+                  <MapIcon className="h-5 w-5" />
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1497,419 +1626,424 @@ export default function BursariesPage() {
 
       {/* Main content area with optional sidebar layout - make it strictly contained */}
       <div className={`flex ${isDetailOpen ? 'gap-6' : ''} flex-1 min-h-0 overflow-hidden`}>
-        {/* Bursary listings */}
-        <div className={`${isDetailOpen ? 'w-3/5' : 'w-full'} transition-all duration-300 overflow-hidden flex flex-col`}>
-          {/* Conditional Rendering: Show skeletons while loading */}
-          {loading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 overflow-y-auto overflow-x-hidden pr-2 custom-scrollbar">
-              {[1, 2, 3, 4].map((_, idx) => (
-                <div
-                  key={idx}
-                  className="bg-white/70 dark:bg-gray-800/30 rounded-2xl shadow-lg p-6 backdrop-blur-md animate-pulse"
-                >
-                  <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-4"></div>
-                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full mb-2"></div>
-                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-5/6"></div>
-                  <div className="mt-4 flex items-center space-x-4">
-                    <div className="h-10 w-10 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
-                    <div>
-                      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-24 mb-1"></div>
-                      <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-32"></div>
+
+        {/* Conditionally render Map or List/Grid Area */}
+        {viewMode === 'map' ? (
+          // Map View Takes Full Width (or adjusted width if detail panel is open)
+          <div className={`${isDetailOpen ? 'w-3/5' : 'w-full'} transition-all duration-300 overflow-hidden flex flex-col`}>
+             <div className="rounded-xl overflow-hidden shadow-lg flex-1"> {/* Map should fill available space */}
+                {/* {console.log("[BursariesPage] Rendering BursaryMap with bursaries:", filteredBursaries)} */}
+                <BursaryMap 
+                    key={`map-${filteredBursaries.length}-${filteredBursaries[0]?._id || 'none'}`} // <-- Added key prop
+                    bursaries={filteredBursaries} 
+                />
+             </div>
+          </div>
+        ) : (
+          // List/Grid View Area (Original structure)
+          <div className={`${isDetailOpen ? 'w-3/5' : 'w-full'} transition-all duration-300 overflow-hidden flex flex-col`}>
+             {/* Conditional Rendering: Loading / No Results / List or Grid */}
+             {loading ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 overflow-y-auto overflow-x-hidden pr-2 custom-scrollbar">
+                  {[1, 2, 3, 4].map((_, idx) => (
+                    // ... Loading Skeleton ...
+                    <div
+                      key={idx}
+                      className="bg-white/70 dark:bg-gray-800/30 rounded-2xl shadow-lg p-6 backdrop-blur-md animate-pulse"
+                    >
+                      <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-4"></div>
+                      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full mb-2"></div>
+                      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-5/6"></div>
+                      <div className="mt-4 flex items-center space-x-4">
+                        <div className="h-10 w-10 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
+                        <div>
+                          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-24 mb-1"></div>
+                          <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-32"></div>
+                        </div>
+                      </div>
                     </div>
+                  ))}
+                </div>
+             ) : filteredBursaries.length === 0 ? (
+                // No bursaries found
+                <div className="flex flex-col items-center justify-center py-12 text-center flex-1">
+                  {/* ... No bursaries found message ... */}
+                   <div className="bg-white/80 dark:bg-gray-800/60 rounded-2xl p-8 backdrop-blur-md shadow-lg max-w-md mx-auto">
+                    <div className="text-purple-600 dark:text-purple-400 mb-4">
+                      <svg className="h-16 w-16 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+                      </svg>
+                    </div>
+                    <h3 className="text-xl font-semibold text-gray-800 dark:text-white mb-2">No Bursaries Found</h3>
+                    <p className="text-gray-600 dark:text-gray-300 mb-4">
+                      {search || category !== "all" || filterOption !== "all" ? 
+                        "Try adjusting your filters or search criteria to find more opportunities." : 
+                        "There are no bursaries available at the moment. Please check back later."}
+                    </p>
+                    {(search || category !== "all" || filterOption !== "all") && (
+                      <button
+                        onClick={() => {
+                          setSearch("");
+                          setCategory("all");
+                          setFilterOption("all");
+                        }}
+                        className="text-sm text-purple-600 hover:text-purple-800 dark:text-purple-400 flex items-center justify-center gap-1 mx-auto"
+                      >
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        Reset Filters
+                      </button>
+                    )}
                   </div>
                 </div>
-              ))}
-            </div>
-          ) : filteredBursaries.length === 0 ? (
-            // No bursaries found
-            <div className="flex flex-col items-center justify-center py-12 text-center flex-1">
-              <div className="bg-white/80 dark:bg-gray-800/60 rounded-2xl p-8 backdrop-blur-md shadow-lg max-w-md mx-auto">
-                <div className="text-purple-600 dark:text-purple-400 mb-4">
-                  <svg className="h-16 w-16 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
-                  </svg>
-                </div>
-                <h3 className="text-xl font-semibold text-gray-800 dark:text-white mb-2">No Bursaries Found</h3>
-                <p className="text-gray-600 dark:text-gray-300 mb-4">
-                  {search || category !== "all" || filterOption !== "all" ? 
-                    "Try adjusting your filters or search criteria to find more opportunities." : 
-                    "There are no bursaries available at the moment. Please check back later."}
-                </p>
-                {(search || category !== "all" || filterOption !== "all") && (
-                  <button
-                    onClick={() => {
-                      setSearch("");
-                      setCategory("all");
-                      setFilterOption("all");
-                    }}
-                    className="text-sm text-purple-600 hover:text-purple-800 dark:text-purple-400 flex items-center justify-center gap-1 mx-auto"
-                  >
-                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
-                    Reset Filters
-                  </button>
-                )}
-              </div>
-            </div>
-          ) : (
-            // Show bursary cards or list
-            <div className={`${
-              viewMode === "card" 
-                ? "grid grid-cols-1 md:grid-cols-2 gap-6" 
-                : "flex flex-col space-y-4"
-            } overflow-y-auto overflow-x-hidden custom-scrollbar pr-2 h-full`}>
-              {filteredBursaries.map((bursary) => (
-                viewMode === "card" ? (
-                  // Card View
-                  <div 
-                    key={bursary._id}
-                    onClick={() => handleBursaryClick(bursary)}
-                    className={`${
-                      selectedBursary && selectedBursary._id === bursary._id
-                        ? 'bg-purple-50 dark:bg-purple-900/20 border-2 border-purple-300 dark:border-purple-700'
-                        : 'bg-white/90 dark:bg-gray-800/60 border border-purple-100/50 dark:border-purple-900/30'
-                    } rounded-2xl shadow-lg p-6 hover:shadow-xl hover:border-purple-200 dark:hover:border-purple-800/40 transition-all cursor-pointer relative ${newlyAddedBursaryId === bursary._id ? 'highlight-new-bursary' : ''}`}
-                  >
-                    {newlyAddedBursaryId === bursary._id && (
-                      <div className="new-badge">NEW</div>
-                    )}
-                    
-                    {/* Your Listing badge as a stamp */}
-                    {isOwnBursary(bursary) && (
-                      <div className="absolute -top-2 -left-2 z-10">
-                        <span className="px-1.5 py-0.5 bg-purple-100 dark:bg-purple-900/60 rounded-full text-[9px] leading-tight text-purple-800 dark:text-purple-300 font-medium border border-purple-200 dark:border-purple-800/50 whitespace-nowrap shadow-sm">
-                          Your Listing
-                        </span>
-                      </div>
-                    )}
-                    
-                    {/* Card header with organization logo */}
-                    <div className="flex justify-between items-start mb-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-purple-100 to-indigo-100 dark:from-purple-900/40 dark:to-indigo-900/40 rounded-full flex items-center justify-center shrink-0 overflow-hidden">
-                          {bursary.organization && bursary.organization.images && bursary.organization.images.logo ? (
-                            <img src={bursary.organization.images.logo} alt={`${bursary.organization?.title || 'Organization'} logo`} className="w-full h-full object-cover" />
-                          ) : (
-                            <BuildingOffice2Icon className="h-6 w-6 text-purple-600 dark:text-purple-400" />
-                          )}
-                        </div>
-                        <div>
-                          {/* Organization title */}
-                          <span className="text-sm font-medium text-gray-600 dark:text-gray-400 block">
-                            <Link 
-                              href={bursary.organization?._id ? `/organizations/${bursary.organization._id}` : '#'}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (!bursary.organization?._id) {
-                                  e.preventDefault();
-                                  console.error('No organization ID available');
-                                }
-                              }}
-                              className="hover:text-purple-600 dark:hover:text-purple-400 hover:underline"
+             ) : (
+                 // Show bursary cards or list
+                 <div className={`${ viewMode === "card" ? "grid grid-cols-1 md:grid-cols-2 gap-6" : "flex flex-col space-y-4" } overflow-y-auto overflow-x-hidden custom-scrollbar pr-2 h-full`}>
+                     {filteredBursaries.map((bursary) => (
+                         viewMode === "card" ? ( /* Card View Component */ 
+                            // ... existing card rendering ...
+                            <div 
+                              key={bursary._id}
+                              onClick={() => handleBursaryClick(bursary)}
+                              className={`${ selectedBursary && selectedBursary._id === bursary._id ? 'bg-purple-50 dark:bg-purple-900/20 border-2 border-purple-300 dark:border-purple-700' : 'bg-white/90 dark:bg-gray-800/60 border border-purple-100/50 dark:border-purple-900/30' } rounded-2xl shadow-lg p-6 hover:shadow-xl hover:border-purple-200 dark:hover:border-purple-800/40 transition-all cursor-pointer relative ${newlyAddedBursaryId === bursary._id ? 'highlight-new-bursary' : ''}`}
                             >
-                              {bursary.organization?.title || bursary.organization?.name || 'Organization'}
-                            </Link>
-                          </span>
-                          
-                          {/* Organization type - properly placed UNDER the title */}
-                          <span className="text-xs text-indigo-600 dark:text-indigo-400 font-medium block mt-1">
-                            {getOrganizationType(bursary)}
-                          </span>
-                        </div>
-                      </div>
-                      
-                      {/* Move bookmark button to top-left corner */}
-                      <div className="flex items-center gap-2">
-                        {/* Added date - modern time ago with tooltip */}
-                        <div className="z-10" onClick={(e) => e.stopPropagation()}>
-                          <div className="relative">
-                            <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 bg-white/90 dark:bg-gray-800/90 px-2 py-0.5 rounded-full shadow-sm border border-gray-100/50 dark:border-gray-700/50 hover:bg-white dark:hover:bg-gray-800 transition-colors group">
-                              <ClockIcon className="h-3 w-3" />
-                              <span className="truncate max-w-[80px] sm:max-w-none">{formatTimeAgo(bursary.createdAt)}</span>
-                            
-                              {/* Tooltip */}
-                              <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-full opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-20 w-max pointer-events-none mt-1">
-                                <div className="bg-gray-900/95 dark:bg-black/95 text-white text-xs rounded-lg py-2 px-3 shadow-lg whitespace-nowrap">
-                                  <span className="font-medium">Added:</span> {formatFullDate(bursary.createdAt)}
-                                  <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-2 h-2 rotate-45 bg-gray-900/95 dark:bg-black/95"></div>
+                              {newlyAddedBursaryId === bursary._id && (
+                                <div className="new-badge">NEW</div>
+                              )}
+                              
+                              {/* Your Listing badge as a stamp */}
+                              {isOwnBursary(bursary) && (
+                                <div className="absolute -top-2 -left-2 z-10">
+                                  <span className="px-1.5 py-0.5 bg-purple-100 dark:bg-purple-900/60 rounded-full text-[9px] leading-tight text-purple-800 dark:text-purple-300 font-medium border border-purple-200 dark:border-purple-800/50 whitespace-nowrap shadow-sm">
+                                    Your Listing
+                                  </span>
+                                </div>
+                              )}
+                              
+                              {/* Card header with organization logo */}
+                              <div className="flex justify-between items-start mb-4">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-10 h-10 bg-gradient-to-br from-purple-100 to-indigo-100 dark:from-purple-900/40 dark:to-indigo-900/40 rounded-full flex items-center justify-center shrink-0 overflow-hidden">
+                                    {bursary.organization && bursary.organization.images && bursary.organization.images.logo ? (
+                                      <img src={bursary.organization.images.logo} alt={`${bursary.organization?.title || 'Organization'} logo`} className="w-full h-full object-cover" />
+                                    ) : (
+                                      <BuildingOffice2Icon className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+                                    )}
+                                  </div>
+                                  <div>
+                                    {/* Organization title */}
+                                    <span className="text-sm font-medium text-gray-600 dark:text-gray-400 block">
+                                      <Link 
+                                        href={bursary.organization?._id ? `/organizations/${bursary.organization._id}` : '#'}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          if (!bursary.organization?._id) {
+                                            e.preventDefault();
+                                            console.error('No organization ID available');
+                                          }
+                                        }}
+                                        className="hover:text-purple-600 dark:hover:text-purple-400 hover:underline"
+                                      >
+                                        {bursary.organization?.title || bursary.organization?.name || 'Organization'}
+                                      </Link>
+                                    </span>
+                                    
+                                    {/* Organization type - properly placed UNDER the title */}
+                                    <span className="text-xs text-indigo-600 dark:text-indigo-400 font-medium block mt-1">
+                                      {getOrganizationType(bursary)}
+                                    </span>
+                                  </div>
+                                </div>
+                                
+                                {/* Move bookmark button to top-left corner */}
+                                <div className="flex items-center gap-2">
+                                  {/* Added date - modern time ago with tooltip */}
+                                  <div className="z-10" onClick={(e) => e.stopPropagation()}>
+                                    <div className="relative">
+                                      <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 bg-white/90 dark:bg-gray-800/90 px-2 py-0.5 rounded-full shadow-sm border border-gray-100/50 dark:border-gray-700/50 hover:bg-white dark:hover:bg-gray-800 transition-colors group">
+                                        <ClockIcon className="h-3 w-3" />
+                                        <span className="truncate max-w-[80px] sm:max-w-none">{formatTimeAgo(bursary.createdAt)}</span>
+                                      
+                                        {/* Tooltip */}
+                                        <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-full opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-20 w-max pointer-events-none mt-1">
+                                          <div className="bg-gray-900/95 dark:bg-black/95 text-white text-xs rounded-lg py-2 px-3 shadow-lg whitespace-nowrap">
+                                            <span className="font-medium">Added:</span> {formatFullDate(bursary.createdAt)}
+                                            <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-2 h-2 rotate-45 bg-gray-900/95 dark:bg-black/95"></div>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                
+                                  {/* Bookmark button */}
+                                  <button 
+                                    onClick={(e) => toggleBookmark(e, bursary._id)} 
+                                    className="text-gray-400 hover:text-purple-600 dark:text-gray-500 dark:hover:text-purple-400 transition-colors flex-shrink-0 ml-2 self-start mt-1"
+                                    aria-label={isBookmarked(bursary._id) ? "Remove from bookmarks" : "Add to bookmarks"}
+                                  >
+                                    {isBookmarked(bursary._id) ? (
+                                      <BookmarkSolidIcon className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                                    ) : (
+                                      <BookmarkOutlineIcon className="h-5 w-5" />
+                                    )}
+                                  </button>
                                 </div>
                               </div>
-                            </div>
-                          </div>
-                        </div>
-                      
-                        {/* Bookmark button */}
-                        <button 
-                          onClick={(e) => toggleBookmark(e, bursary._id)} 
-                          className="text-gray-400 hover:text-purple-600 dark:text-gray-500 dark:hover:text-purple-400 transition-colors flex-shrink-0 ml-2 self-start mt-1"
-                          aria-label={isBookmarked(bursary._id) ? "Remove from bookmarks" : "Add to bookmarks"}
-                        >
-                          {isBookmarked(bursary._id) ? (
-                            <BookmarkSolidIcon className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-                          ) : (
-                            <BookmarkOutlineIcon className="h-5 w-5" />
-                          )}
-                        </button>
-                      </div>
-                    </div>
-                    
-                    {/* Bursary title and description */}
-                    <h3 className="text-xl font-bold text-title-text-color dark:text-white mb-2 line-clamp-2 group-hover:text-purple-700 dark:group-hover:text-purple-400 transition-colors">
-                      {bursary.title}
-                    </h3>
-                    
-                    <p className="text-gray-600 dark:text-gray-300 mb-4 line-clamp-3">
-                      {bursary.description}
-                    </p>
-                    
-                    {/* Match score - only show for student users */}
-                    {userRole === "student" && matchesLoaded && (
-                      <div className="mb-4">
-                        {(() => {
-                          const match = matches.find(m => m.bursary._id === bursary._id);
-                          if (match) {
-                            return (
-                              <>
-                                <div className="flex items-center mb-2">
-                                  {/* Eligibility Score Bar */}
-                                  <div className="w-24 h-2 bg-gray-200 rounded-full mr-2 overflow-hidden">
-                                    <div 
-                                      className="h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full" 
-                                      style={{ width: `${match.matchScore.eligibilityScore}%` }}
-                                    />
-                                  </div>
-                                  <span className={`text-sm font-medium ${
-                                    match.matchScore.eligibilityScore >= 80 ? "text-green-600 dark:text-green-400" : 
-                                    match.matchScore.eligibilityScore >= 50 ? "text-yellow-600 dark:text-yellow-400" : 
-                                    "text-gray-600 dark:text-gray-400"
-                                  }`}>
-                                    {match.matchScore.eligibilityScore}% Eligible
-                                  </span>
+                              
+                              {/* Bursary title and description */}
+                              <h3 className="text-xl font-bold text-title-text-color dark:text-white mb-2 line-clamp-2 group-hover:text-purple-700 dark:group-hover:text-purple-400 transition-colors">
+                                {bursary.title}
+                              </h3>
+                              
+                              <p className="text-gray-600 dark:text-gray-300 mb-4 line-clamp-3">
+                                {bursary.description}
+                              </p>
+                              
+                              {/* Match score - only show for student users */}
+                              {userRole === "student" && matchesLoaded && (
+                                <div className="mb-4">
+                                  {(() => {
+                                    const match = matches.find(m => m.bursary._id === bursary._id);
+                                    if (match) {
+                                      return (
+                                        <>
+                                          <div className="flex items-center mb-2">
+                                            {/* Eligibility Score Bar */}
+                                            <div className="w-24 h-2 bg-gray-200 rounded-full mr-2 overflow-hidden">
+                                              <div 
+                                                className="h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full" 
+                                                style={{ width: `${match.matchScore.eligibilityScore}%` }}
+                                              />
+                                            </div>
+                                            <span className={`text-sm font-medium ${
+                                              match.matchScore.eligibilityScore >= 80 ? "text-green-600 dark:text-green-400" : 
+                                              match.matchScore.eligibilityScore >= 50 ? "text-yellow-600 dark:text-yellow-400" : 
+                                              "text-gray-600 dark:text-gray-400"
+                                            }`}>
+                                              {match.matchScore.eligibilityScore}% Eligible
+                                            </span>
+                                            
+                                            {/* Optional: Display AI Suitability Score if available */}
+                                            {match.matchScore.aiMatchScore !== undefined && (
+                                              <span className="ml-2 text-xs text-purple-600 dark:text-purple-400 bg-purple-100 dark:bg-purple-900/30 px-1.5 py-0.5 rounded-full flex items-center">
+                                                 <SparklesIcon className="h-3 w-3 mr-0.5" /> {match.matchScore.aiMatchScore}% AI Fit
+                                              </span>
+                                            )}
+                                          </div>
+                                          {match.matchScore.aiMatchExplanation && (
+                                            <div className="mt-2 text-sm text-gray-600 dark:text-gray-400 border-l-2 border-purple-400 pl-2 italic">
+                                              "{match.matchScore.aiMatchExplanation}"
+                                            </div>
+                                          )}
+                                        </>
+                                      );
+                                    }
+                                    return null;
+                                  })()}
+                                </div>
+                              )}
+                              
+                              {/* Tags and categories */}
+                              {(bursary.fieldOfStudy?.length > 0 || bursary.aiTags?.length > 0) && (
+                                <div className="flex flex-wrap gap-2 mb-4">
+                                  {bursary.fieldOfStudy?.slice(0, 2).map((field) => (
+                                    <span 
+                                      key={field} 
+                                      className="px-2 py-1 bg-purple-100 dark:bg-purple-900/40 text-xs text-purple-800 dark:text-purple-300 rounded-full"
+                                    >
+                                      {field}
+                                    </span>
+                                  ))}
                                   
-                                  {/* Optional: Display AI Suitability Score if available */}
-                                  {match.matchScore.aiMatchScore !== undefined && (
-                                    <span className="ml-2 text-xs text-purple-600 dark:text-purple-400 bg-purple-100 dark:bg-purple-900/30 px-1.5 py-0.5 rounded-full flex items-center">
-                                       <SparklesIcon className="h-3 w-3 mr-0.5" /> {match.matchScore.aiMatchScore}% AI Fit
+                                  {bursary.aiTags?.slice(0, 1).map((tag) => (
+                                    <span 
+                                      key={tag} 
+                                      className="px-2 py-1 bg-blue-100 dark:bg-blue-900/40 text-xs text-blue-800 dark:text-blue-300 rounded-full"
+                                    >
+                                      {tag}
+                                    </span>
+                                  ))}
+                                  
+                                  {(bursary.fieldOfStudy?.length > 2 || bursary.aiTags?.length > 1) && (
+                                    <span className="px-2 py-1 bg-gray-100 dark:bg-gray-800 text-xs text-gray-600 dark:text-gray-400 rounded-full">
+                                      +{(bursary.fieldOfStudy?.length - 2 > 0 ? bursary.fieldOfStudy.length - 2 : 0) + 
+                                         (bursary.aiTags?.length - 1 > 0 ? bursary.aiTags.length - 1 : 0)} more
                                     </span>
                                   )}
                                 </div>
-                                {match.matchScore.aiMatchExplanation && (
-                                  <div className="mt-2 text-sm text-gray-600 dark:text-gray-400 border-l-2 border-purple-400 pl-2 italic">
-                                    "{match.matchScore.aiMatchExplanation}"
-                                  </div>
-                                )}
-                              </>
-                            );
-                          }
-                          return null;
-                        })()}
-                      </div>
-                    )}
-                    
-                    {/* Tags and categories */}
-                    {(bursary.fieldOfStudy?.length > 0 || bursary.aiTags?.length > 0) && (
-                      <div className="flex flex-wrap gap-2 mb-4">
-                        {bursary.fieldOfStudy?.slice(0, 2).map((field) => (
-                          <span 
-                            key={field} 
-                            className="px-2 py-1 bg-purple-100 dark:bg-purple-900/40 text-xs text-purple-800 dark:text-purple-300 rounded-full"
-                          >
-                            {field}
-                          </span>
-                        ))}
-                        
-                        {bursary.aiTags?.slice(0, 1).map((tag) => (
-                          <span 
-                            key={tag} 
-                            className="px-2 py-1 bg-blue-100 dark:bg-blue-900/40 text-xs text-blue-800 dark:text-blue-300 rounded-full"
-                          >
-                            {tag}
-                          </span>
-                        ))}
-                        
-                        {(bursary.fieldOfStudy?.length > 2 || bursary.aiTags?.length > 1) && (
-                          <span className="px-2 py-1 bg-gray-100 dark:bg-gray-800 text-xs text-gray-600 dark:text-gray-400 rounded-full">
-                            +{(bursary.fieldOfStudy?.length - 2 > 0 ? bursary.fieldOfStudy.length - 2 : 0) + 
-                               (bursary.aiTags?.length - 1 > 0 ? bursary.aiTags.length - 1 : 0)} more
-                          </span>
-                        )}
-                      </div>
-                    )}
-                    
-                    {/* Card footer with award amount and deadline */}
-                    <div className="flex items-center justify-between text-sm">
-                      <div className="flex items-center text-emerald-700 dark:text-emerald-400 font-medium">
-                        <CurrencyDollarIcon className="h-5 w-5 mr-1" />
-                        {formatCurrency(bursary.awardAmount)}
-                      </div>
-                      
-                      <div className="flex items-center text-gray-600 dark:text-gray-400">
-                        <CalendarIcon className="h-4 w-4 mr-1" />
-                        <span>Deadline: {formatDate(bursary.deadline)}</span>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  // List View
-                  <div 
-                    key={bursary._id}
-                    onClick={() => handleBursaryClick(bursary)}
-                    className={`${
-                      selectedBursary && selectedBursary._id === bursary._id
-                        ? 'bg-purple-50 dark:bg-purple-900/20 border-2 border-purple-300 dark:border-purple-700'
-                        : 'bg-white/90 dark:bg-gray-800/60 border border-purple-100/50 dark:border-purple-900/30'
-                    } rounded-xl shadow p-4 hover:shadow-lg hover:border-purple-200 dark:hover:border-purple-800/40 transition-all cursor-pointer flex gap-4 relative ${newlyAddedBursaryId === bursary._id ? 'highlight-new-bursary' : ''}`}
-                  >
-                    {newlyAddedBursaryId === bursary._id && (
-                      <div className="new-badge">NEW</div>
-                    )}
-                    
-                    {/* Your Listing badge as a stamp */}
-                    {isOwnBursary(bursary) && (
-                      <div className="absolute -top-2 -left-2 z-10">
-                        <span className="px-1.5 py-0.5 bg-purple-100 dark:bg-purple-900/60 rounded-full text-[9px] leading-tight text-purple-800 dark:text-purple-300 font-medium border border-purple-200 dark:border-purple-800/50 whitespace-nowrap shadow-sm">
-                          Your Listing
-                        </span>
-                      </div>
-                    )}
-                    
-                    {/* Organization logo */}
-                    <div className="w-12 h-12 bg-gradient-to-br from-purple-100 to-indigo-100 dark:from-purple-900/40 dark:to-indigo-900/40 rounded-full flex items-center justify-center shrink-0 overflow-hidden">
-                      {bursary.organization && bursary.organization.images && bursary.organization.images.logo ? (
-                        <img src={bursary.organization.images.logo} alt={`${bursary.organization?.title || 'Organization'} logo`} className="w-full h-full object-cover" />
-                      ) : (
-                        <BuildingOffice2Icon className="h-6 w-6 text-purple-600 dark:text-purple-400" />
-                      )}
-                    </div>
-                    
-                    <div className="flex-1 min-w-0">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          {/* Organization title */}
-                          <span className="text-sm font-medium text-gray-600 dark:text-gray-400 block">
-                            <Link 
-                              href={bursary.organization?._id ? `/organizations/${bursary.organization._id}` : '#'}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (!bursary.organization?._id) {
-                                  e.preventDefault();
-                                  console.error('No organization ID available');
-                                }
-                              }}
-                              className="hover:text-purple-600 dark:hover:text-purple-400 hover:underline"
-                            >
-                              {bursary.organization?.title || bursary.organization?.name || 'Organization'}
-                            </Link>
-                          </span>
-                          
-                          {/* Organization type - properly placed UNDER the title */}
-                          <span className="text-xs text-indigo-600 dark:text-indigo-400 font-medium block mt-1">
-                            {getOrganizationType(bursary)}
-                          </span>
-                          
-                          <h3 className="text-lg font-semibold text-title-text-color dark:text-white line-clamp-1">
-                            {bursary.title}
-                          </h3>
-                          
-                          <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-2 mt-1">
-                            {bursary.description}
-                          </p>
-                          
-                          {/* Match score - only show for student users (list view) */}
-                          {userRole === "student" && matchesLoaded && (
-                            <div className="mt-2">
-                              {(() => {
-                                const match = matches.find(m => m.bursary._id === bursary._id);
-                                if (match) {
-                                  return (
-                                    <>
-                                      <div className="flex items-center">
-                                        {/* Eligibility Score Bar */}
-                                        <div className="w-20 h-2 bg-gray-200 dark:bg-gray-700 rounded-full mr-1.5 overflow-hidden">
-                                          <div 
-                                            className="h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full" 
-                                            style={{ width: `${match.matchScore.eligibilityScore}%` }}
-                                          />
-                                        </div>
-                                        <span className={`text-xs font-medium ${
-                                          match.matchScore.eligibilityScore >= 80 ? "text-green-600 dark:text-green-400" : 
-                                          match.matchScore.eligibilityScore >= 50 ? "text-yellow-600 dark:text-yellow-400" : 
-                                          "text-gray-600 dark:text-gray-400"
-                                        }`}>
-                                          {match.matchScore.eligibilityScore}% Eligible
-                                        </span>
-                                        
-                                        {/* Optional: Display AI Suitability Score if available */}
-                                        {match.matchScore.aiMatchScore !== undefined && (
-                                          <span className="ml-1.5 text-[10px] text-purple-600 dark:text-purple-400 bg-purple-100 dark:bg-purple-900/30 px-1 py-0.5 rounded-full flex items-center">
-                                             <SparklesIcon className="h-2.5 w-2.5 mr-0.5" /> {match.matchScore.aiMatchScore}% AI Fit
-                                          </span>
-                                        )}
-                                      </div>
-                                      {match.matchScore.aiMatchExplanation && (
-                                        <div className="mt-1 text-xs text-gray-600 dark:text-gray-400 border-l-2 border-purple-400 pl-2 line-clamp-2 italic">
-                                          "{match.matchScore.aiMatchExplanation}"
-                                        </div>
-                                      )}
-                                    </>
-                                  );
-                                }
-                                return null;
-                              })()}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      
-                      <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
-                        <div className="flex items-center text-emerald-700 dark:text-emerald-400 font-medium">
-                          <CurrencyDollarIcon className="h-4 w-4 mr-1" />
-                          {formatCurrency(bursary.awardAmount)}
-                        </div>
-                        
-                        <div className="flex items-center text-gray-600 dark:text-gray-400">
-                          <CalendarIcon className="h-4 w-4 mr-1" />
-                          <span>Deadline: {formatDate(bursary.deadline)}</span>
-                        </div>
-                        
-                        {/* Added date with tooltip - list view */}
-                        <div className="flex items-center text-gray-500 dark:text-gray-400 relative" onClick={(e) => e.stopPropagation()}>
-                          <div className="flex items-center hover:text-purple-500 dark:hover:text-purple-400 transition-colors cursor-pointer relative">
-                            <ClockIcon className="h-3.5 w-3.5 mr-1" />
-                            <span className="truncate max-w-[80px] sm:max-w-none text-xs">{formatTimeAgo(bursary.createdAt)}</span>
-                            
-                            {/* Tooltip - Only visible when parent is hovered */}
-                            <div className="absolute left-1/2 transform -translate-x-1/2 bottom-full mb-1 opacity-0 invisible transition-opacity duration-200 group-hover:opacity-100 hover:opacity-100 hover:visible z-20 w-max">
-                              <div className="bg-gray-900/95 dark:bg-black/95 text-white text-xs rounded-lg py-2 px-3 shadow-lg whitespace-nowrap">
-                                <span className="font-medium">Added:</span> {formatFullDate(bursary.createdAt)}
-                                <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-2 h-2 rotate-45 bg-gray-900/95 dark:bg-black/95"></div>
+                              )}
+                              
+                              {/* Card footer with award amount and deadline */}
+                              <div className="flex items-center justify-between text-sm">
+                                <div className="flex items-center text-emerald-700 dark:text-emerald-400 font-medium">
+                                  <CurrencyDollarIcon className="h-5 w-5 mr-1" />
+                                  {formatCurrency(bursary.awardAmount)}
+                                </div>
+                                
+                                <div className="flex items-center text-gray-600 dark:text-gray-400">
+                                  <CalendarIcon className="h-4 w-4 mr-1" />
+                                  <span>Deadline: {formatDate(bursary.deadline)}</span>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {/* Bookmark button */}
-                    <button 
-                      onClick={(e) => toggleBookmark(e, bursary._id)} 
-                      className="text-gray-400 hover:text-purple-600 dark:text-gray-500 dark:hover:text-purple-400 transition-colors flex-shrink-0 ml-2 self-start mt-1"
-                      aria-label={isBookmarked(bursary._id) ? "Remove from bookmarks" : "Add to bookmarks"}
-                    >
-                      {isBookmarked(bursary._id) ? (
-                        <BookmarkSolidIcon className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-                      ) : (
-                        <BookmarkOutlineIcon className="h-5 w-5" />
-                      )}
-                    </button>
+                          ) : (
+                            // List View
+                            <div 
+                              key={bursary._id}
+                              onClick={() => handleBursaryClick(bursary)}
+                              className={`${ selectedBursary && selectedBursary._id === bursary._id ? 'bg-purple-50 dark:bg-purple-900/20 border-2 border-purple-300 dark:border-purple-700' : 'bg-white/90 dark:bg-gray-800/60 border border-purple-100/50 dark:border-purple-900/30' } rounded-xl shadow p-4 hover:shadow-lg hover:border-purple-200 dark:hover:border-purple-800/40 transition-all cursor-pointer flex gap-4 relative ${newlyAddedBursaryId === bursary._id ? 'highlight-new-bursary' : ''}`}
+                            >
+                              {newlyAddedBursaryId === bursary._id && (
+                                <div className="new-badge">NEW</div>
+                              )}
+                              
+                              {/* Your Listing badge as a stamp */}
+                              {isOwnBursary(bursary) && (
+                                <div className="absolute -top-2 -left-2 z-10">
+                                  <span className="px-1.5 py-0.5 bg-purple-100 dark:bg-purple-900/60 rounded-full text-[9px] leading-tight text-purple-800 dark:text-purple-300 font-medium border border-purple-200 dark:border-purple-800/50 whitespace-nowrap shadow-sm">
+                                    Your Listing
+                                  </span>
+                                </div>
+                              )}
+                              
+                              {/* Organization logo */}
+                              <div className="w-12 h-12 bg-gradient-to-br from-purple-100 to-indigo-100 dark:from-purple-900/40 dark:to-indigo-900/40 rounded-full flex items-center justify-center shrink-0 overflow-hidden">
+                                {bursary.organization && bursary.organization.images && bursary.organization.images.logo ? (
+                                  <img src={bursary.organization.images.logo} alt={`${bursary.organization?.title || 'Organization'} logo`} className="w-full h-full object-cover" />
+                                ) : (
+                                  <BuildingOffice2Icon className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+                                )}
+                              </div>
+                              
+                              <div className="flex-1 min-w-0">
+                                <div className="flex justify-between items-start">
+                                  <div>
+                                    {/* Organization title */}
+                                    <span className="text-sm font-medium text-gray-600 dark:text-gray-400 block">
+                                      <Link 
+                                        href={bursary.organization?._id ? `/organizations/${bursary.organization._id}` : '#'}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          if (!bursary.organization?._id) {
+                                            e.preventDefault();
+                                            console.error('No organization ID available');
+                                          }
+                                        }}
+                                        className="hover:text-purple-600 dark:hover:text-purple-400 hover:underline"
+                                      >
+                                        {bursary.organization?.title || bursary.organization?.name || 'Organization'}
+                                      </Link>
+                                    </span>
+                                    
+                                    {/* Organization type - properly placed UNDER the title */}
+                                    <span className="text-xs text-indigo-600 dark:text-indigo-400 font-medium block mt-1">
+                                      {getOrganizationType(bursary)}
+                                    </span>
+                                    
+                                    <h3 className="text-lg font-semibold text-title-text-color dark:text-white line-clamp-1">
+                                      {bursary.title}
+                                    </h3>
+                                    
+                                    <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-2 mt-1">
+                                      {bursary.description}
+                                    </p>
+                                    
+                                    {/* Match score - only show for student users (list view) */}
+                                    {userRole === "student" && matchesLoaded && (
+                                      <div className="mt-2">
+                                        {(() => {
+                                          const match = matches.find(m => m.bursary._id === bursary._id);
+                                          if (match) {
+                                            return (
+                                              <>
+                                                <div className="flex items-center">
+                                                  {/* Eligibility Score Bar */}
+                                                  <div className="w-20 h-2 bg-gray-200 dark:bg-gray-700 rounded-full mr-1.5 overflow-hidden">
+                                                    <div 
+                                                      className="h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full" 
+                                                      style={{ width: `${match.matchScore.eligibilityScore}%` }}
+                                                    />
+                                                  </div>
+                                                  <span className={`text-xs font-medium ${
+                                                    match.matchScore.eligibilityScore >= 80 ? "text-green-600 dark:text-green-400" : 
+                                                    match.matchScore.eligibilityScore >= 50 ? "text-yellow-600 dark:text-yellow-400" : 
+                                                    "text-gray-600 dark:text-gray-400"
+                                                  }`}>
+                                                    {match.matchScore.eligibilityScore}% Eligible
+                                                  </span>
+                                                  
+                                                  {/* Optional: Display AI Suitability Score if available */}
+                                                  {match.matchScore.aiMatchScore !== undefined && (
+                                                    <span className="ml-1.5 text-[10px] text-purple-600 dark:text-purple-400 bg-purple-100 dark:bg-purple-900/30 px-1 py-0.5 rounded-full flex items-center">
+                                                       <SparklesIcon className="h-2.5 w-2.5 mr-0.5" /> {match.matchScore.aiMatchScore}% AI Fit
+                                                    </span>
+                                                  )}
+                                                </div>
+                                                {match.matchScore.aiMatchExplanation && (
+                                                  <div className="mt-1 text-xs text-gray-600 dark:text-gray-400 border-l-2 border-purple-400 pl-2 line-clamp-2 italic">
+                                                    "{match.matchScore.aiMatchExplanation}"
+                                                  </div>
+                                                )}
+                                              </>
+                                            );
+                                          }
+                                          return null;
+                                        })()}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                                
+                                <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+                                  <div className="flex items-center text-emerald-700 dark:text-emerald-400 font-medium">
+                                    <CurrencyDollarIcon className="h-4 w-4 mr-1" />
+                                    {formatCurrency(bursary.awardAmount)}
+                                  </div>
+                                  
+                                  <div className="flex items-center text-gray-600 dark:text-gray-400">
+                                    <CalendarIcon className="h-4 w-4 mr-1" />
+                                    <span>Deadline: {formatDate(bursary.deadline)}</span>
+                                  </div>
+                                  
+                                  {/* Added date with tooltip - list view */}
+                                  <div className="flex items-center text-gray-500 dark:text-gray-400 relative" onClick={(e) => e.stopPropagation()}>
+                                    <div className="flex items-center hover:text-purple-500 dark:hover:text-purple-400 transition-colors cursor-pointer relative">
+                                      <ClockIcon className="h-3.5 w-3.5 mr-1" />
+                                      <span className="truncate max-w-[80px] sm:max-w-none text-xs">{formatTimeAgo(bursary.createdAt)}</span>
+                                      
+                                      {/* Tooltip - Only visible when parent is hovered */}
+                                      <div className="absolute left-1/2 transform -translate-x-1/2 bottom-full mb-1 opacity-0 invisible transition-opacity duration-200 group-hover:opacity-100 hover:opacity-100 hover:visible z-20 w-max">
+                                        <div className="bg-gray-900/95 dark:bg-black/95 text-white text-xs rounded-lg py-2 px-3 shadow-lg whitespace-nowrap">
+                                          <span className="font-medium">Added:</span> {formatFullDate(bursary.createdAt)}
+                                          <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-2 h-2 rotate-45 bg-gray-900/95 dark:bg-black/95"></div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              {/* Bookmark button */}
+                              <button 
+                                onClick={(e) => toggleBookmark(e, bursary._id)} 
+                                className="text-gray-400 hover:text-purple-600 dark:text-gray-500 dark:hover:text-purple-400 transition-colors flex-shrink-0 ml-2 self-start mt-1"
+                                aria-label={isBookmarked(bursary._id) ? "Remove from bookmarks" : "Add to bookmarks"}
+                              >
+                                {isBookmarked(bursary._id) ? (
+                                  <BookmarkSolidIcon className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                                ) : (
+                                  <BookmarkOutlineIcon className="h-5 w-5" />
+                                )}
+                              </button>
+                            </div>
+                          )
+                      ))}
                   </div>
-                )
-              ))}
-            </div>
-          )}
-        </div>
-        
+              )}
+          </div>
+        )}
+
         {/* Detail Panel (Sidebar) */}
         {isDetailOpen && selectedBursary && (
           <div className="w-2/5 bg-purple-50/90 dark:bg-purple-900/10 shadow-xl rounded-2xl border-[3px] border-purple-400 dark:border-purple-600 p-6 overflow-y-auto overflow-x-hidden custom-scrollbar">
@@ -2148,7 +2282,7 @@ export default function BursariesPage() {
               <div className="mt-6 mb-6 p-4 bg-gradient-to-r from-purple-50/90 to-blue-50/90 dark:from-purple-900/30 dark:to-blue-900/30 backdrop-blur-sm rounded-xl border border-purple-200/70 dark:border-purple-800/30 shadow-sm">
                 <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-3 flex items-center">
                   <SparklesIcon className="h-5 w-5 mr-2 text-purple-600 dark:text-purple-400" />
-                  AI Matching Summary
+                  AI Bursary Overview
                 </h3>
                 
                 {summaryLoading ? (
@@ -2160,9 +2294,9 @@ export default function BursariesPage() {
                     <span className="ml-2 text-gray-600 dark:text-gray-300">Generating AI insights...</span>
                   </div>
                 ) : (
-                  <div className="text-gray-700 dark:text-gray-300 bg-white/50 dark:bg-gray-800/20 p-4 rounded-lg border border-purple-100/50 dark:border-purple-800/20">
+                  <div className="bg-white/50 dark:bg-gray-800/20 p-4 rounded-lg border border-purple-100/50 dark:border-purple-800/20">
                     {bursarySummary ? (
-                      <p className="leading-relaxed">{bursarySummary}</p>
+                      formattedBursarySummary(bursarySummary)
                     ) : (
                       <div className="flex items-center justify-center text-gray-500 dark:text-gray-400 p-4">
                         <QuestionMarkCircleIcon className="h-5 w-5 mr-2 text-gray-400" />
@@ -2192,11 +2326,23 @@ export default function BursariesPage() {
                       Match Analysis
                     </h3>
                     
+                    {/* Eligibility conversational explanation */}
+                    {match.matchScore.conversationalExplanation && (
+                      <div className="mb-4 p-4 bg-white dark:bg-blue-900/30 rounded-lg border border-blue-100 dark:border-blue-800/30">
+                        <h4 className="text-sm font-medium text-blue-600 dark:text-blue-400 mb-2 flex items-center">
+                          <InformationCircleIcon className="w-4 h-4 mr-1" />
+                          Eligibility Reasoning
+                        </h4>
+                        <p className="text-gray-700 dark:text-gray-200 whitespace-pre-wrap">
+                          {match.matchScore.conversationalExplanation}
+                        </p>
+                      </div>
+                    )}
+                    
                     {/* AI-generated explanation - Enhanced display */}
                     {match.matchScore.aiMatchExplanation && (
                       <div className="mb-4 p-4 bg-white dark:bg-blue-900/30 rounded-lg border border-blue-100 dark:border-blue-800/30">
-                        {/* --- DEBUG MARKER 1 --- */}
-                        <p style={{color: 'red', fontWeight: 'bold'}}>[DEBUG: AI Explanation Block Rendered]</p> 
+                        {/* --- DEBUG MARKER 1 REMOVED --- */}
                         <h4 className="text-sm font-medium text-purple-600 dark:text-purple-400 mb-2 flex items-center">
                           <SparklesIcon className="w-4 h-4 mr-1" />
                           AI Recommendation
@@ -2225,8 +2371,7 @@ export default function BursariesPage() {
                       {/* AI Suitability Score */}
                       {match.matchScore.aiMatchScore !== undefined ? (
                         <div className="flex flex-col items-center p-3 bg-white dark:bg-purple-900/20 rounded-lg border border-purple-100 dark:border-purple-800/30">
-                          {/* --- DEBUG MARKER 2 --- */}
-                          <p style={{color: 'lime', fontWeight: 'bold'}}>[DEBUG: AI Score Block Rendered]</p> 
+                          {/* --- DEBUG MARKER 2 REMOVED --- */}
                            <span className="text-xs font-medium text-purple-600 dark:text-purple-300 mb-1 flex items-center">
                              <SparklesIcon className="h-3.5 w-3.5 mr-1"/> AI Suitability Score
                            </span>
@@ -2237,8 +2382,7 @@ export default function BursariesPage() {
                         </div>
                       ) : (
                          <div className="flex flex-col items-center justify-center p-3 bg-gray-100 dark:bg-gray-700/30 rounded-lg border border-gray-200 dark:border-gray-600/30">
-                            {/* --- DEBUG MARKER 3 --- */}
-                           <p style={{color: 'orange', fontWeight: 'bold'}}>[DEBUG: AI Score N/A Block Rendered]</p> 
+                            {/* --- DEBUG MARKER 3 REMOVED --- */}
                            <span className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 flex items-center">
                              <SparklesIcon className="h-3.5 w-3.5 mr-1"/> AI Suitability Score
                            </span>

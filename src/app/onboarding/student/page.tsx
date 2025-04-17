@@ -14,8 +14,11 @@ import {
   HeartIcon,
   LightBulbIcon, 
   CheckCircleIcon,
-  CurrencyDollarIcon
+  CurrencyDollarIcon,
+  IdentificationIcon,
+  UserCircleIcon
 } from "@heroicons/react/24/outline";
+import TagInput from "@/components/TagInput";
 
 interface StudentFormData {
   institution: string;
@@ -29,6 +32,8 @@ interface StudentFormData {
   careerGoals: string;
   locationPreferences: string[];
   bio: string;
+  citizenship: string[];
+  gender: string;
   [key: string]: string | string[]; // Updated to handle arrays
 }
 
@@ -163,6 +168,23 @@ export default function StudentOnboardingPage() {
       icon: <UserIcon className="h-6 w-6" />,
       description: "A brief introduction that highlights your unique qualities"
     },
+    { 
+      name: "citizenship", 
+      label: "Citizenship(s)", 
+      placeholder: "Type citizenship and press Enter/Tab",
+      required: false, 
+      icon: <IdentificationIcon className="h-6 w-6" />,
+      description: "Your country/countries of citizenship (e.g., Canadian, American)",
+      isTagInput: true
+    },
+    { 
+      name: "gender", 
+      label: "Gender", 
+      placeholder: "Enter your gender (optional)", 
+      required: false, 
+      icon: <UserCircleIcon className="h-6 w-6" />,
+      description: "Your gender identity"
+    },
     { name: "review", label: "Review Your Information", icon: <PencilSquareIcon className="h-6 w-6" /> }
   ];
 
@@ -179,6 +201,8 @@ export default function StudentOnboardingPage() {
     careerGoals: "",
     locationPreferences: [],
     bio: "",
+    citizenship: [],
+    gender: "",
   });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -200,6 +224,10 @@ export default function StudentOnboardingPage() {
   };
 
   const handleIconSelectChange = (field: string, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleTagInputChange = (field: string, value: string[]) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -260,14 +288,14 @@ export default function StudentOnboardingPage() {
       // Make sure all array fields are properly handled
       const submissionData = {
         ...formData,
-        // Ensure these are arrays
         interests: Array.isArray(formData.interests) ? formData.interests : [],
         skills: Array.isArray(formData.skills) ? formData.skills : [],
         languages: Array.isArray(formData.languages) ? formData.languages : [],
         achievements: Array.isArray(formData.achievements) ? formData.achievements : [],
         locationPreferences: Array.isArray(formData.locationPreferences) ? formData.locationPreferences : [],
-        // Make sure numerical fields are properly formatted
         graduationYear: formData.graduationYear ? parseInt(formData.graduationYear) : null,
+        citizenship: Array.isArray(formData.citizenship) ? formData.citizenship : [],
+        gender: formData.gender || "",
       };
       
       console.log("Sanitized form data:", JSON.stringify(submissionData, null, 2));
@@ -406,6 +434,19 @@ export default function StudentOnboardingPage() {
       );
     }
 
+    if (currentField.isTagInput) {
+      return (
+        <TagInput 
+          label={currentField.label}
+          description={currentField.description}
+          icon={currentField.icon}
+          placeholder={currentField.placeholder}
+          value={formData[currentField.name] as string[]}
+          onChange={(newValue) => handleTagInputChange(currentField.name, newValue)}
+        />
+      );
+    }
+
     return (
       <div className="mb-4">
         <div className="flex items-center gap-3 mb-2">
@@ -483,7 +524,7 @@ export default function StudentOnboardingPage() {
 
         {renderFieldContent()}
 
-        <div className="flex justify-between mt-6">
+        <div className={`flex ${currentStep > 0 ? "justify-between" : "justify-end"} mt-6`}>
           {currentStep > 0 && (
             <button
               type="button"

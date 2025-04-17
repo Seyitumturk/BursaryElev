@@ -11,6 +11,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { toast } from 'react-hot-toast';
 import ProfileSummary from "@/components/ProfileSummary";
+import TagInput from "@/components/TagInput";
 
 // Format the AI summary text with proper bullet points
 const formattedSummaryText = (text: string) => {
@@ -91,6 +92,12 @@ const gradientAnimation = `
   }
 `;
 
+// Define common options for relevant fields
+const commonInterests = ["Technology", "Reading", "Travel", "Sports", "Music", "Art", "Cooking", "Gaming"];
+const commonSkills = ["Programming", "Project Management", "Communication", "Data Analysis", "Graphic Design", "Marketing", "Problem Solving"];
+const commonLanguages = ["English", "French", "Spanish", "Mandarin", "German", "Arabic"];
+const commonAchievements = ["Dean's List", "Published Research", "Led Project Team", "Volunteer Award", "Competition Winner"];
+
 interface Profile {
   _id?: string;
   // Common fields
@@ -101,6 +108,10 @@ interface Profile {
   major?: string;
   graduationYear?: string;
   interests?: string[];
+  gpa?: number;
+  citizenshipStatus?: string[];
+  identifiesAsIndigenous?: boolean;
+  hasDisability?: boolean;
   bio?: string;
   skills?: string[];
   languages?: string[];
@@ -151,6 +162,7 @@ interface Profile {
   firstName?: string;
   lastName?: string;
   position?: string;
+  ethnicity?: string[];
 }
 
 export default function ProfilePage() {
@@ -199,6 +211,12 @@ export default function ProfilePage() {
         setEditableProfile(data.profile ? {...data.profile} : null);
         if(data.role) {
           setDbRole(data.role);
+          // Initialize new fields if they don't exist on fetched profile
+          if (data.profile && data.role === 'student') {
+            if (!data.profile.citizenshipStatus) data.profile.citizenshipStatus = [];
+            if (!data.profile.ethnicity) data.profile.ethnicity = [];
+            // Initialize booleans if needed, default to false or undefined based on schema
+          }
           // Store role in localStorage for other components to use
           localStorage.setItem('userRole', data.role);
         }
@@ -228,6 +246,43 @@ export default function ProfilePage() {
     }
   };
 
+  // Specific handler for TagInput changes
+  const handleTagInputChange = (fieldName: keyof Profile, newValue: string[]) => {
+    if (!editableProfile) return;
+    setEditableProfile(prev => prev ? { ...prev, [fieldName]: newValue } : null);
+  };
+
+  // Handler for standard input changes (including checkboxes)
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    if (!editableProfile) return;
+    const { name, value, type } = e.target;
+
+    let processedValue: string | number | boolean = value;
+
+    if (type === 'checkbox') {
+      // Handle predefined options checkboxes
+      if (name.startsWith('interest-') || name.startsWith('skill-') || name.startsWith('language-') || name.startsWith('achievement-')) {
+        const fieldName = name.split('-')[0] as keyof Profile;
+        const optionValue = name.split('-')[1];
+        const currentValues = (editableProfile[fieldName] as string[] || []);
+        const isChecked = (e.target as HTMLInputElement).checked;
+        processedValue = isChecked ? [...currentValues, optionValue] : currentValues.filter(v => v !== optionValue);
+        setEditableProfile(prev => prev ? { ...prev, [fieldName]: processedValue } : null);
+        return; // Handled specific checkbox logic
+      }
+      processedValue = (e.target as HTMLInputElement).checked;
+    } else if (name === 'gpa') {
+      // Allow empty string or convert to number, handle NaN
+      const numValue = parseFloat(value);
+      processedValue = value === '' ? '' : (isNaN(numValue) ? editableProfile.gpa || '' : numValue);
+    } else if (name === 'graduationYear') {
+        const numValue = parseInt(value, 10);
+        processedValue = value === '' ? '' : (isNaN(numValue) ? editableProfile.graduationYear || '' : numValue);
+    }
+
+    setEditableProfile(prev => prev ? { ...prev, [name]: processedValue } : null);
+  };
+
   const handleSaveProfile = async (event?: React.FormEvent) => {
     if (event) {
       event.preventDefault();
@@ -238,11 +293,8 @@ export default function ProfilePage() {
     setIsSaving(true);
 
     try {
-      // Get the current form data directly from the form fields
-      const formData = new FormData(formRef.current);
-      
-      // Create a profile object that matches the schema structure
-      const profileToSave = {...editableProfile};
+      // Use the state `editableProfile` which is updated by handleInputChange/handleTagInputChange
+      const profileToSave = { ...editableProfile };
       
       // Clear the contact object to start fresh with form data
       if (activeTab === "contact") {
@@ -250,66 +302,51 @@ export default function ProfilePage() {
       }
       
       // Process all form fields
-      formData.forEach((value, key) => {
-        if (key.startsWith('contact.socialMedia.')) {
-          const platform = key.split('.')[2];
+      // Ensure numerical fields are numbers or undefined/null
+      if (profileToSave.gpa === '' || profileToSave.gpa === undefined || profileToSave.gpa === null) {
+        delete profileToSave.gpa; // Remove if empty, let backend handle default/null
+      } else {
+        profileToSave.gpa = Number(profileToSave.gpa);
+      }
+      if (profileToSave.graduationYear === '' || profileToSave.graduationYear === undefined || profileToSave.graduationYear === null) {
+         delete profileToSave.graduationYear;
+      } else {
+          profileToSave.graduationYear = Number(profileToSave.graduationYear);
+      }
+
+      // For organization contact fields (assuming they might still use FormData or similar)
+      if (effectiveRole !== 'student' && formRef.current) {
+          const formData = new FormData(formRef.current);
           if (!profileToSave.contact) profileToSave.contact = {};
           if (!profileToSave.contact.socialMedia) profileToSave.contact.socialMedia = {};
-          // Type-safe way to set social media fields
-          if (platform === 'twitter' || platform === 'facebook' || platform === 'linkedin') {
-            profileToSave.contact.socialMedia[platform] = value as string;
-          }
-        }
-        else if (key.startsWith('contact.')) {
-          const field = key.split('.')[1];
-          if (!profileToSave.contact) profileToSave.contact = {};
-          // Set the contact field in a type-safe way
-          profileToSave.contact = {
-            ...profileToSave.contact,
-            [field]: value as string
-          };
-        }
-        else {
-          // For regular fields, use a type assertion
-          let fieldValue = value as string;
-          
-          // Handle array fields (comma-separated strings)
-          if (effectiveRole === "student" && 
-              (key === "interests" || key === "skills" || key === "languages" || 
-               key === "achievements" || key === "locationPreferences")) {
-            // Convert comma-separated string to array and trim whitespace
-            if (fieldValue && fieldValue.trim()) {
-              (profileToSave as any)[key] = fieldValue.split(',').map(item => item.trim()).filter(item => item);
-            } else {
-              (profileToSave as any)[key] = [];
-            }
-          } 
-          // Handle organization array fields
-          else if (effectiveRole === "funder" && 
-                  (key === "targetDemographics" || key === "scholarshipTypes" || 
-                   key === "eligibilityCriteria")) {
-            // Convert comma-separated string to array and trim whitespace
-            if (fieldValue && fieldValue.trim()) {
-              (profileToSave as any)[key] = fieldValue.split(',').map(item => item.trim()).filter(item => item);
-            } else {
-              (profileToSave as any)[key] = [];
-            }
-          }
-          else {
-            (profileToSave as any)[key] = fieldValue;
-          }
-        }
-      });
-      
-      console.log("SAVING PROFILE DATA:", JSON.stringify(profileToSave, null, 2));
-      
-      // Ensure all required array fields are present for student profiles
+          // Manually populate contact fields from form data if necessary
+          formData.forEach((value, key) => {
+              if (key.startsWith('contact.socialMedia.')) {
+                  const platform = key.split('.')[2] as 'twitter' | 'facebook' | 'linkedin';
+                  if (profileToSave.contact?.socialMedia) {
+                      profileToSave.contact.socialMedia[platform] = value as string;
+                  }
+              } else if (key.startsWith('contact.')) {
+                  const field = key.split('.')[1];
+                  if (profileToSave.contact) {
+                    (profileToSave.contact as any)[field] = value as string;
+                  }
+              } else if (key !== 'gpa' && key !== 'graduationYear' && !(profileToSave as any)[key] && !key.includes('.')) {
+                // Populate other top-level org fields if not handled by state
+                 (profileToSave as any)[key] = value as string;
+              }
+          });
+      }
+
+      // Ensure all required array fields are present (handled by TagInput state)
       if (effectiveRole === "student") {
         profileToSave.interests = profileToSave.interests || [];
         profileToSave.skills = profileToSave.skills || [];
         profileToSave.languages = profileToSave.languages || [];
         profileToSave.achievements = profileToSave.achievements || [];
         profileToSave.locationPreferences = profileToSave.locationPreferences || [];
+        profileToSave.citizenshipStatus = profileToSave.citizenshipStatus || []; // Ensure new array field
+        profileToSave.ethnicity = profileToSave.ethnicity || [];
       }
       
       // Ensure all required array fields are present for organization profiles
@@ -318,6 +355,8 @@ export default function ProfilePage() {
         profileToSave.scholarshipTypes = profileToSave.scholarshipTypes || [];
         profileToSave.eligibilityCriteria = profileToSave.eligibilityCriteria || [];
       }
+
+      console.log("SAVING PROFILE DATA:", JSON.stringify(profileToSave, null, 2));
 
       const response = await fetch('/api/profile', {
         method: 'PUT',
@@ -379,7 +418,7 @@ export default function ProfilePage() {
     let completedFields = 0;
     
     if (effectiveRole === "student") {
-      totalFields = 11; // Updated total field count for student profile
+      totalFields = 16; // Updated total field count (incl. ethnicity)
       if (profile.institution) completedFields++;
       if (profile.major) completedFields++;
       if (profile.graduationYear) completedFields++;
@@ -392,6 +431,11 @@ export default function ProfilePage() {
       if (profile.financialBackground) completedFields++;
       if (profile.careerGoals) completedFields++;
       if (profile.locationPreferences && profile.locationPreferences.length > 0) completedFields++;
+      if (profile.gpa) completedFields++;
+      if (profile.citizenshipStatus && profile.citizenshipStatus.length > 0) completedFields++;
+      if (profile.identifiesAsIndigenous !== undefined) completedFields++;
+      if (profile.hasDisability !== undefined) completedFields++;
+      if (profile.ethnicity && profile.ethnicity.length > 0) completedFields++;
     } else {
       // Organization profile basic fields
       totalFields = 5; // name, title, category, about, mission
@@ -441,13 +485,15 @@ export default function ProfilePage() {
     label, 
     value, 
     fieldName, 
+    fieldType = 'text',
     isTextarea = false,
     readOnly = false,
     isArray = false
   }: { 
     label: string, 
-    value: string | undefined, 
+    value: string | number | boolean | undefined,
     fieldName: string,
+    fieldType?: 'text' | 'number' | 'checkbox',
     isTextarea?: boolean,
     readOnly?: boolean,
     isArray?: boolean
@@ -459,28 +505,41 @@ export default function ProfilePage() {
           isTextarea ? (
             <textarea
               name={fieldName}
-              defaultValue={value || ''}
+              value={value as string || ''}
+              onChange={handleInputChange}
               readOnly={readOnly}
               rows={4}
               className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-[#3d2a20] dark:text-white p-3 text-base"
+            />
+          ) : fieldType === 'checkbox' ? (
+            <input
+              type="checkbox"
+              name={fieldName}
+              checked={value as boolean || false}
+              onChange={handleInputChange}
+              readOnly={readOnly}
+              className="mt-1 h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:checked:bg-blue-500"
             />
           ) : (
             isArray ? (
               displayArrayValueModern(value?.split(', '))
             ) : (
               <input
-                type="text"
+                type={fieldType === 'number' ? 'number' : 'text'}
                 name={fieldName}
-                defaultValue={value || ''}
+                value={value as string | number || ''}
+                onChange={handleInputChange}
+                readOnly={readOnly}
+                step={fieldType === 'number' ? '0.01' : undefined}
                 className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-[#3d2a20] dark:text-white p-3 h-12 text-base"
               />
             )
           )
         ) : (
-          isArray ? (
-            displayArrayValueModern(value?.split(', '))
+          fieldType === 'checkbox' ? (
+            <p className="mt-1 text-gray-900 dark:text-white">{value ? 'Yes' : 'No'}</p>
           ) : (
-            <p className="mt-1 text-gray-900 dark:text-white whitespace-pre-line">{value || "Not specified"}</p>
+            <p className="mt-1 text-gray-900 dark:text-white whitespace-pre-line">{value !== undefined && value !== '' ? value : "Not specified"}</p>
           )
         )}
       </div>
@@ -492,18 +551,21 @@ export default function ProfilePage() {
     platform,
     value,
     placeholder,
-    isEditing
+    isEditing,
+    onChange
   }: {
     platform: string;
     value: string | undefined;
     placeholder: string;
     isEditing: boolean;
+    onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   }) => {
     return isEditing ? (
       <input
         type="text"
         name={`contact.socialMedia.${platform}`}
-        defaultValue={value || ''}
+        value={value || ''}
+        onChange={onChange}
         className="block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-[#3d2a20] dark:text-white p-3 h-12 text-base"
         placeholder={placeholder}
       />
@@ -731,14 +793,43 @@ export default function ProfilePage() {
                                   <EditableField 
                                     label="Graduation Year" 
                                     value={editableProfile.graduationYear?.toString()} 
+                                    fieldType="number"
                                     fieldName="graduationYear"
                                   />
-                                  <EditableField 
-                                    label="Interests" 
-                                    value={editableProfile.interests?.join(', ')} 
-                                    fieldName="interests"
-                                    isArray={true}
-                                  />
+                                  {isEditing ? (
+                                    <div className="space-y-3">
+                                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Common Interests</label>
+                                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                        {commonInterests.map(interest => (
+                                          <div key={interest} className="flex items-center">
+                                            <input
+                                              type="checkbox"
+                                              id={`interest-${interest}`}
+                                              name={`interest-${interest}`}
+                                              checked={editableProfile?.interests?.includes(interest) || false}
+                                              onChange={handleInputChange}
+                                              className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600"
+                                            />
+                                            <label htmlFor={`interest-${interest}`} className="ml-2 text-sm text-gray-600 dark:text-gray-400">{interest}</label>
+                                          </div>
+                                        ))}
+                                      </div>
+                                      <TagInput
+                                        label="Add Custom Interests"
+                                        value={editableProfile?.interests?.filter(i => !commonInterests.includes(i)) || []}
+                                        onChange={(customTags) => {
+                                          const checkedCommon = commonInterests.filter(ci => editableProfile?.interests?.includes(ci));
+                                          handleTagInputChange('interests', [...checkedCommon, ...customTags]);
+                                        }}
+                                        placeholder="Type custom interest & press Enter/Tab..."
+                                      />
+                                    </div>
+                                  ) : (
+                                    <div>
+                                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Interests</label>
+                                      {displayArrayValueModern(editableProfile.interests)}
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                               
@@ -763,19 +854,33 @@ export default function ProfilePage() {
                                   <SparklesIcon className="h-6 w-6 text-blue-600 dark:text-[var(--light-brown-1)]" />
                                   <h3 className="ml-2 text-lg font-medium text-gray-900 dark:text-white">Skills & Languages</h3>
                                 </div>
-                                <div className="space-y-4">
-                                  <EditableField 
-                                    label="Skills" 
-                                    value={editableProfile.skills?.join(', ')} 
-                                    fieldName="skills"
-                                    isArray={true}
-                                  />
-                                  <EditableField 
-                                    label="Languages" 
-                                    value={editableProfile.languages?.join(', ')} 
-                                    fieldName="languages"
-                                    isArray={true}
-                                  />
+                                <div className="space-y-6">
+                                  {isEditing ? (
+                                    <TagInput
+                                      label="Skills"
+                                      value={editableProfile.skills || []}
+                                      onChange={(newValue) => handleTagInputChange('skills', newValue)}
+                                      placeholder="Type a skill and press Enter/Tab..."
+                                    />
+                                  ) : (
+                                    <div>
+                                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Skills</label>
+                                      {displayArrayValueModern(editableProfile.skills)}
+                                    </div>
+                                  )}
+                                  {isEditing ? (
+                                    <TagInput
+                                      label="Languages"
+                                      value={editableProfile.languages || []}
+                                      onChange={(newValue) => handleTagInputChange('languages', newValue)}
+                                      placeholder="Type a language and press Enter/Tab..."
+                                    />
+                                  ) : (
+                                    <div className="mt-4">
+                                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Languages</label>
+                                      {displayArrayValueModern(editableProfile.languages)}
+                                    </div>
+                                  )}
                                   <EditableField 
                                     label="Achievements" 
                                     value={editableProfile.achievements?.join(', ')} 
@@ -788,27 +893,79 @@ export default function ProfilePage() {
                               {/* New section for Career and Finance */}
                               <div className="bg-blue-50 dark:bg-[#5b3d2e]/50 rounded-lg p-6 shadow-sm border border-blue-100 dark:border-[#d2ac8b]/30">
                                 <div className="flex items-center mb-4">
-                                  <BriefcaseIcon className="h-6 w-6 text-blue-600 dark:text-[var(--light-brown-1)]" />
-                                  <h3 className="ml-2 text-lg font-medium text-gray-900 dark:text-white">Career & Financials</h3>
+                                  <MapPinIcon className="h-6 w-6 text-blue-600 dark:text-[var(--light-brown-1)]" />
+                                  <h3 className="ml-2 text-lg font-medium text-gray-900 dark:text-white">Background & Preferences</h3>
                                 </div>
-                                <div className="space-y-4">
-                                  <EditableField 
-                                    label="Career Goals" 
-                                    value={editableProfile.careerGoals} 
-                                    fieldName="careerGoals"
-                                    isTextarea={true}
-                                  />
+                                <div className="space-y-6">
                                   <EditableField 
                                     label="Financial Background" 
                                     value={editableProfile.financialBackground} 
                                     fieldName="financialBackground"
+                                    isTextarea={true}
                                   />
                                   <EditableField 
-                                    label="Location Preferences" 
-                                    value={editableProfile.locationPreferences?.join(', ')} 
-                                    fieldName="locationPreferences"
-                                    isArray={true}
+                                    label="GPA (e.g., 3.7)"
+                                    value={editableProfile.gpa}
+                                    fieldName="gpa"
+                                    fieldType="number"
                                   />
+                                  {isEditing ? (
+                                    <TagInput
+                                      label="Citizenship / Residency Status"
+                                      value={editableProfile.citizenshipStatus || []}
+                                      onChange={(newValue) => handleTagInputChange('citizenshipStatus', newValue)}
+                                      placeholder="e.g., Canadian Citizen, Permanent Resident..."
+                                    />
+                                  ) : (
+                                    <div>
+                                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Citizenship / Residency Status</label>
+                                      {displayArrayValueModern(editableProfile.citizenshipStatus)}
+                                    </div>
+                                  )}
+                                  {isEditing ? (
+                                    <TagInput
+                                      label="Location Preferences"
+                                      value={editableProfile.locationPreferences || []}
+                                      onChange={(newValue) => handleTagInputChange('locationPreferences', newValue)}
+                                      placeholder="e.g., Toronto, Ontario, Canada..."
+                                    />
+                                  ) : (
+                                    <div>
+                                      <label className="block text-sm font-text-gray-700 dark:text-gray-300 mb-1">Location Preferences</label>
+                                      {displayArrayValueModern(editableProfile.locationPreferences)}
+                                    </div>
+                                  )}
+                                  {isEditing ? (
+                                    <TagInput
+                                      label="Ethnicity"
+                                      value={editableProfile.ethnicity || []}
+                                      onChange={(newValue) => handleTagInputChange('ethnicity', newValue)}
+                                      placeholder="e.g., Asian, Black, Caucasian..."
+                                    />
+                                  ) : (
+                                    <div>
+                                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Ethnicity</label>
+                                      {displayArrayValueModern(editableProfile.ethnicity)}
+                                    </div>
+                                  )}
+                                  <div className="flex items-center justify-between">
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Self-identify as Indigenous (First Nations, Métis, Inuit)</label>
+                                    <EditableField
+                                      label=""
+                                      value={editableProfile.identifiesAsIndigenous}
+                                      fieldName="identifiesAsIndigenous"
+                                      fieldType="checkbox"
+                                    />
+                                  </div>
+                                  <div className="flex items-center justify-between">
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Self-identify with a disability</label>
+                                    <EditableField
+                                      label=""
+                                      value={editableProfile.hasDisability}
+                                      fieldName="hasDisability"
+                                      fieldType="checkbox"
+                                    />
+                                  </div>
                                 </div>
                               </div>
                             </div>
@@ -1127,6 +1284,7 @@ export default function ProfilePage() {
                                   value={editableProfile.contact?.socialMedia?.twitter}
                                   placeholder="username"
                                   isEditing={isEditing}
+                                  onChange={handleInputChange}
                                 />
                               </div>
                               <div>
@@ -1141,6 +1299,7 @@ export default function ProfilePage() {
                                   value={editableProfile.contact?.socialMedia?.facebook}
                                   placeholder="username or page"
                                   isEditing={isEditing}
+                                  onChange={handleInputChange}
                                 />
                               </div>
                               <div>
@@ -1155,6 +1314,7 @@ export default function ProfilePage() {
                                   value={editableProfile.contact?.socialMedia?.linkedin}
                                   placeholder="username"
                                   isEditing={isEditing}
+                                  onChange={handleInputChange}
                                 />
                               </div>
                             </div>

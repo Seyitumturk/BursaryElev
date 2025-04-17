@@ -143,6 +143,7 @@ export async function POST(request: NextRequest) {
         financialNeedLevel: bursaryData.financialNeedLevel || "medium",
         requiredDocuments: bursaryData.requiredDocuments || [],
         documents: bursaryData.documents || [],
+        location: bursaryData.location,
         organization: orgProfile._id,
         contentModerationStatus: "approved",
       });

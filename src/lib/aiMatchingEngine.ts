@@ -142,26 +142,27 @@ export async function generateBursarySummary(bursary: IBursary): Promise<string>
     };
 
     const prompt = `
-      You are an AI assistant helping with bursary opportunity summarization for a student matching platform.
+      You are an AI assistant tasked with creating a clear, concise, and user-friendly summary of a bursary opportunity for students exploring their options.
+
+      Your goal is to explain what this bursary is about, who it's for, and what the key requirements are in a conversational and easy-to-understand manner.
       
-      Based on the following bursary information, create a structured, detailed summary specifically designed for matching with student profiles.
-      
-      BURSARY SUMMARY STRUCTURE:
-      1. Clearly identify key matching criteria in a consistent, structured format
-      2. Highlight SPECIFIC requirements that will be used to determine student compatibility:
-         - Exact field(s) of study required
-         - Financial need level expected
-         - Academic qualifications (GPA, year of study, institution types)
-         - Specific skills or experiences valued
-         - Demographic/eligibility restrictions
-      3. Include concrete details about award amount, deadline, and application process
+      TASK: Based on the provided bursary data, generate a summary covering the following points:
+      1.  **Purpose/Goal:** Briefly explain the main goal or focus of this bursary (e.g., supporting STEM students, encouraging community leadership).
+      2.  **Ideal Candidate:** Describe the type of student the bursary aims to support (mention key criteria like field of study, academic level, financial need, etc.).
+      3.  **Key Eligibility Requirements:** List the most important requirements students MUST meet (e.g., specific major, minimum GPA if mentioned, citizenship, enrollment status).
+      4.  **Award Details:** State the award amount and application deadline clearly.
+      5.  **Application Insight:** Briefly mention any notable aspects of the application (e.g., required documents, complexity level).
+
+      TONE & STYLE:
+      - Conversational and informative.
+      - Clear and direct language.
+      - Structure the information logically, perhaps using short paragraphs or bullet points for clarity.
+      - Avoid jargon where possible.
+      - Aim for approximately 150-200 words.
       
       FORMAT REQUIREMENTS:
-      - Use clear headings and bullet points
-      - Prioritize information that will be used for matching algorithms
-      - Be concise but comprehensive (250-300 words total)
-      - Focus on FACTUAL criteria rather than subjective descriptions
-      - Include ALL relevant eligibility requirements
+      - You can use paragraphs, headings (like **Eligibility:**), and/or bullet points (using '-') for readability.
+      - Present the information in a way that helps a student quickly understand if this bursary is relevant to them.
       
       Bursary Data:
       ${JSON.stringify(bursaryData, null, 2)}
@@ -266,9 +267,20 @@ export async function calculateAISemanticMatch(
 
     const data = await response.json();
     
+    // Clean the raw response string from Claude API
+    let rawResponse = data.response || "";
+    rawResponse = rawResponse.trim();
+    if (rawResponse.startsWith("```json")) {
+      rawResponse = rawResponse.substring(7);
+    }
+    if (rawResponse.endsWith("```")) {
+      rawResponse = rawResponse.substring(0, rawResponse.length - 3);
+    }
+    rawResponse = rawResponse.trim(); // Trim again after removing fences
+
     try {
-      // Parse the JSON response from Claude
-      const result = JSON.parse(data.response);
+      // Parse the cleaned JSON response
+      const result = JSON.parse(rawResponse);
       const score = parseInt(result.score, 10);
       const explanation = result.explanation;
       
@@ -280,15 +292,19 @@ export async function calculateAISemanticMatch(
       };
     } catch (parseError) {
       console.error("Error parsing AI match response:", parseError);
-      console.log("Raw response:", data.response);
+      console.log("Raw response:", data.response); // Log original raw response for debugging
       
       // Try to extract just the score and explanation if the response is not valid JSON
-      const scoreMatch = data.response.match(/score["\s:]+(\d+)/i);
+      // Use the cleaned rawResponse for extraction attempts
+      const scoreMatch = rawResponse.match(/score["\s:]+(\d+)/i);
       const score = scoreMatch ? parseInt(scoreMatch[1], 10) : 50;
+
+      const explanationMatch = rawResponse.match(/explanation["\s:]+"(.*?)"/i);
+      const extractedExplanation = explanationMatch ? explanationMatch[1] : "Unable to parse the full explanation.";
       
       return { 
         score, 
-        explanation: "Unable to parse the full explanation. Extracted score based on available data." 
+        explanation: extractedExplanation 
       };
     }
   } catch (error) {

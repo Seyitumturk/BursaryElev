@@ -13,6 +13,8 @@ export interface IBursary extends Document {
   academicLevel: string[];
   financialNeedLevel: string; // low, medium, high
   requiredDocuments: string[];
+  // Location field
+  location?: string;
   // AI-generated fields
   aiTags: string[];
   aiCategorization: string[];
@@ -50,6 +52,8 @@ const BursarySchema: Schema = new Schema(
       required: true 
     },
     requiredDocuments: { type: [String], default: [] },
+    // Location field
+    location: { type: String, required: false },
     // AI-generated fields
     aiTags: { type: [String], default: [] },
     aiCategorization: { type: [String], default: [] },

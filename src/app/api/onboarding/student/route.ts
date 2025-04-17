@@ -50,7 +50,9 @@ export async function POST(request: Request) {
       achievements,
       financialBackground,
       careerGoals,
-      locationPreferences
+      locationPreferences,
+      citizenship,
+      gender
     } = body;
 
     console.log("[Student Onboarding] Extracted fields:");
@@ -60,6 +62,8 @@ export async function POST(request: Request) {
     console.log("[Student Onboarding] financialBackground:", financialBackground);
     console.log("[Student Onboarding] careerGoals:", careerGoals);
     console.log("[Student Onboarding] locationPreferences:", locationPreferences);
+    console.log("[Student Onboarding] citizenship:", citizenship);
+    console.log("[Student Onboarding] gender:", gender);
 
     // Find existing user first
     console.log(`[Student Onboarding] Looking for existing user with clerkId: ${userId}`);
@@ -94,7 +98,9 @@ export async function POST(request: Request) {
       achievements: Array.isArray(achievements) ? achievements : [],
       financialBackground: financialBackground || "",
       careerGoals: careerGoals || "",
-      locationPreferences: Array.isArray(locationPreferences) ? locationPreferences : []
+      locationPreferences: Array.isArray(locationPreferences) ? locationPreferences : [],
+      citizenship: Array.isArray(citizenship) ? citizenship : [],
+      gender: gender || ""
     };
 
     console.log("[Student Onboarding] Profile data to save:", JSON.stringify(profileData, null, 2));
